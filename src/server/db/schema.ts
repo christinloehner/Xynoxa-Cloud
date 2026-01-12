@@ -17,6 +17,7 @@ import {
   bigserial
 } from "drizzle-orm/pg-core";
 import { jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 
 export const users = pgTable("users", {
@@ -209,7 +210,20 @@ export const folders = pgTable("folders", {
   envelopeSalt: varchar("envelope_salt", { length: 64 }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-});
+}, (t) => ({
+  personalRootUnique: uniqueIndex("folders_personal_root_unq")
+    .on(t.ownerId, t.name)
+    .where(sql`owner_id is not null and parent_id is null and group_folder_id is null`),
+  personalChildUnique: uniqueIndex("folders_personal_child_unq")
+    .on(t.ownerId, t.parentId, t.name)
+    .where(sql`owner_id is not null and parent_id is not null and group_folder_id is null`),
+  groupRootUnique: uniqueIndex("folders_group_root_unq")
+    .on(t.groupFolderId, t.name)
+    .where(sql`owner_id is null and group_folder_id is not null and parent_id is null`),
+  groupChildUnique: uniqueIndex("folders_group_child_unq")
+    .on(t.groupFolderId, t.parentId, t.name)
+    .where(sql`owner_id is null and group_folder_id is not null and parent_id is not null`)
+}));
 
 export const files = pgTable("files", {
   id: uuid("id").defaultRandom().primaryKey(),
