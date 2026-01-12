@@ -13,7 +13,7 @@ import { FileDetails, BulkDetails } from "./components/file-details";
 import { useRightSidebar } from "@/lib/sidebar-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutGrid, List as ListIcon, FolderPlus, ArrowLeft, Loader2, UploadCloud, ShieldCheck, ShieldAlert } from "lucide-react";
+import { LayoutGrid, List as ListIcon, FolderPlus, ArrowLeft, Loader2, UploadCloud, ShieldCheck, ShieldAlert, Trash2, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useVaultKey } from "@/lib/vault-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,6 +42,7 @@ export default function FilesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [currentFolder, setCurrentFolder] = useState<string | null>(() => searchParams.get("folder"));
+  const [viewTrash, setViewTrash] = useState<boolean>(() => searchParams.get("trash") === "1");
 
   // Sorting State with persistence
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -70,7 +71,7 @@ export default function FilesPage() {
     }));
   };
 
-  const { items, isLoading } = useFilesQuery({ currentFolder, sortConfig });
+  const { items, isLoading } = useFilesQuery({ currentFolder, sortConfig, trashed: viewTrash });
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { setRightSidebar } = useRightSidebar();
@@ -85,7 +86,7 @@ export default function FilesPage() {
 
   const breadcrumb = trpc.folders.breadcrumb.useQuery(
     { id: currentFolder as string },
-    { enabled: !!currentFolder }
+    { enabled: !!currentFolder && !viewTrash }
   );
 
   // Folder/Datei aus URL öffnen (Deep-Link)
@@ -94,6 +95,14 @@ export default function FilesPage() {
   // eine Navigation per Doppelklick sofort wieder (Regression).
   useEffect(() => {
     const folder = searchParams.get("folder");
+    const trash = searchParams.get("trash") === "1";
+    if (trash !== viewTrash) {
+      setViewTrash(trash);
+    }
+    if (trash && currentFolder) {
+      setCurrentFolder(null);
+      return;
+    }
     if (folder !== (currentFolder || null)) {
       setCurrentFolder(folder);
     }
@@ -112,13 +121,18 @@ export default function FilesPage() {
 
   const refreshFiles = async () => {
     const folderId = currentFolder ?? null;
-    await Promise.all([
-      utils.files.list.invalidate({ folderId }),
-      utils.folders.list.invalidate({ parentId: folderId }),
-      currentFolder ? utils.folders.breadcrumb.invalidate({ id: currentFolder }) : Promise.resolve(),
-      utils.files.list.refetch({ folderId }),
-      utils.folders.list.refetch({ parentId: folderId })
-    ]);
+    if (viewTrash) {
+      await utils.files.listDeleted.invalidate();
+      await utils.files.listDeleted.refetch();
+    } else {
+      await Promise.all([
+        utils.files.list.invalidate({ folderId }),
+        utils.folders.list.invalidate({ parentId: folderId }),
+        currentFolder ? utils.folders.breadcrumb.invalidate({ id: currentFolder }) : Promise.resolve(),
+        utils.files.list.refetch({ folderId }),
+        utils.folders.list.refetch({ parentId: folderId })
+      ]);
+    }
   };
 
   // Actions
@@ -135,7 +149,9 @@ export default function FilesPage() {
   const renameFile = trpc.files.rename.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); } });
   const renameFolder = trpc.folders.rename.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); } });
 
-  const deleteFile = trpc.files.permanentDelete.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Gelöscht", tone: "success" }); } });
+  const softDeleteFile = trpc.files.softDelete.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "In Papierkorb verschoben", tone: "success" }); } });
+  const restoreFile = trpc.files.restore.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Wiederhergestellt", tone: "success" }); } });
+  const deleteFile = trpc.files.permanentDelete.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Endgültig gelöscht", tone: "success" }); } });
   const deleteFolder = trpc.folders.delete.useMutation({
     onSuccess: () => { refreshFiles(); push({ title: "Ordner gelöscht", tone: "success" }); },
     onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
@@ -210,7 +226,11 @@ export default function FilesPage() {
       if (item.kind === "folder") {
         deleteFolder.mutate({ id });
       } else {
-        deleteFile.mutate({ fileId: id });
+        if (viewTrash) {
+          deleteFile.mutate({ fileId: id });
+        } else {
+          softDeleteFile.mutate({ fileId: id });
+        }
       }
     });
 
@@ -451,6 +471,7 @@ export default function FilesPage() {
   };
 
   const handleBack = () => {
+    if (viewTrash) return;
     if (viewingFile) {
       handleCloseViewer();
       return;
@@ -465,8 +486,15 @@ export default function FilesPage() {
   };
 
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [confirmBulkPermanentDelete, setConfirmBulkPermanentDelete] = useState(false);
+  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
 
   useEffect(() => {
+    if (viewTrash) {
+      setRightSidebar(null);
+      return;
+    }
+
     if (viewingFile) {
       setRightSidebar(null);
       return;
@@ -511,7 +539,7 @@ export default function FilesPage() {
     } else {
       setRightSidebar(null);
     }
-  }, [selectedIds, items, setRightSidebar, viewingFile, handleDownload, handleOpenVersions, handleToggleVault, openInVsCode]);
+  }, [selectedIds, items, setRightSidebar, viewingFile, handleDownload, handleOpenVersions, handleToggleVault, openInVsCode, viewTrash]);
 
   useEffect(() => {
     return () => setRightSidebar(null);
@@ -556,27 +584,49 @@ export default function FilesPage() {
 
         {/* Left: Navigation / Breadcrumbs */}
         <div className="flex items-center gap-4">
-          {currentFolder && (
+          {currentFolder && !viewTrash && (
             <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 text-slate-400 hover:text-slate-100">
               <ArrowLeft size={18} />
             </Button>
           )}
           <div className="flex flex-col">
             <h1 className="text-lg font-semibold text-slate-100">
-              {currentFolder && breadcrumb.data ? breadcrumb.data[breadcrumb.data.length - 1]?.name : "Meine Dateien"}
+              {viewTrash ? "Papierkorb" : (currentFolder && breadcrumb.data ? breadcrumb.data[breadcrumb.data.length - 1]?.name : "Meine Dateien")}
             </h1>
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <span>Root</span>
-              {breadcrumb.data?.map(b => (
-                <span key={b.id}> / {b.name}</span>
-              ))}
-            </div>
+            {!viewTrash && (
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <span>Root</span>
+                {breadcrumb.data?.map(b => (
+                  <span key={b.id}> / {b.name}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right: Actions & View Toggle */}
         {/* Right: Actions & View Toggle */}
         <div className="flex items-center gap-3">
+          <Button
+            variant={viewTrash ? "default" : "ghost"}
+            size="sm"
+            className={clsx(viewTrash ? "bg-amber-600 hover:bg-amber-500 text-white" : "text-slate-400 hover:text-slate-200")}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              if (viewTrash) {
+                params.delete("trash");
+              } else {
+                params.set("trash", "1");
+                params.delete("folder");
+              }
+              const newUrl = params.toString() ? `/files?${params.toString()}` : "/files";
+              router.replace(newUrl as any, { scroll: false });
+              setSelectedIds(new Set());
+            }}
+          >
+            <Trash2 size={16} className="mr-2" />
+            Papierkorb
+          </Button>
           {/* Vault Toggle */}
           <Button
             variant={hasKey ? "ghost" : "outline"}
@@ -606,37 +656,72 @@ export default function FilesPage() {
 
           <div className="h-6 w-px bg-slate-800" />
 
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Neuer Ordner..."
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="h-9 w-32 bg-slate-950/50 border-slate-800 text-xs"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newFolderName.trim()) {
+          {!viewTrash && (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Neuer Ordner..."
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="h-9 w-32 bg-slate-950/50 border-slate-800 text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newFolderName.trim()) {
+                    createFolder.mutate({ name: newFolderName, parentId: currentFolder });
+                    setNewFolderName("");
+                  }
+                }}
+              />
+              <Button size="sm" variant="secondary" onClick={() => {
+                if (newFolderName.trim()) {
                   createFolder.mutate({ name: newFolderName, parentId: currentFolder });
                   setNewFolderName("");
                 }
-              }}
-            />
-            <Button size="sm" variant="secondary" onClick={() => {
-              if (newFolderName.trim()) {
-                createFolder.mutate({ name: newFolderName, parentId: currentFolder });
-                setNewFolderName("");
-              }
-            }}>
-              <FolderPlus size={16} />
-            </Button>
-          </div>
+              }}>
+                <FolderPlus size={16} />
+              </Button>
+            </div>
+          )}
 
-          <Button
-            size="sm"
-            variant="default"
-            className="bg-cyan-600 hover:bg-cyan-500 text-white"
-            onClick={() => setUploadOpen(true)}
-          >
-            <UploadCloud size={16} className="mr-2" /> Upload
-          </Button>
+          {viewTrash ? (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={selectedIds.size === 0}
+                onClick={() => {
+                  Array.from(selectedIds).forEach((id) => restoreFile.mutate({ fileId: id }));
+                  setSelectedIds(new Set());
+                }}
+              >
+                <RotateCcw size={16} className="mr-2" />
+                Wiederherstellen
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={selectedIds.size === 0}
+                onClick={() => setConfirmBulkPermanentDelete(true)}
+              >
+                Endgültig löschen
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={items.length === 0}
+                onClick={() => setConfirmEmptyTrash(true)}
+              >
+                Papierkorb leeren
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="default"
+              className="bg-cyan-600 hover:bg-cyan-500 text-white"
+              onClick={() => setUploadOpen(true)}
+            >
+              <UploadCloud size={16} className="mr-2" /> Upload
+            </Button>
+          )}
         </div>
       </div>
 
@@ -705,13 +790,15 @@ export default function FilesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Bist du sicher?</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchtest du &quot;{deleteItem?.name}&quot; wirklich unwiderruflich löschen?
+              Möchtest du &quot;{deleteItem?.name}&quot; wirklich {viewTrash ? "endgültig löschen" : "in den Papierkorb verschieben"}?
               {deleteItem?.kind === "folder" && " Alle enthaltenen Dateien werden ebenfalls gelöscht."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Löschen</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              {viewTrash ? "Endgültig löschen" : "In Papierkorb"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -720,16 +807,58 @@ export default function FilesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Bist du sicher?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchtest du {selectedIds.size} Elemente wirklich unwiderruflich löschen?
-            </AlertDialogDescription>
+          <AlertDialogDescription>
+            Möchtest du {selectedIds.size} Elemente wirklich {viewTrash ? "endgültig löschen" : "in den Papierkorb verschieben"}?
+          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
               handleDelete();
               setConfirmBulkDelete(false);
-            }} className="bg-red-600 hover:bg-red-700">Löschen</AlertDialogAction>
+            }} className="bg-red-600 hover:bg-red-700">{viewTrash ? "Endgültig löschen" : "In Papierkorb"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmBulkPermanentDelete} onOpenChange={setConfirmBulkPermanentDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bist du sicher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchtest du {selectedIds.size} Elemente wirklich endgültig löschen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              Array.from(selectedIds).forEach((id) => deleteFile.mutate({ fileId: id }));
+              setSelectedIds(new Set());
+              setConfirmBulkPermanentDelete(false);
+            }} className="bg-red-600 hover:bg-red-700">Endgültig löschen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={confirmEmptyTrash} onOpenChange={setConfirmEmptyTrash}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Papierkorb leeren?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchtest du alle Dateien im Papierkorb endgültig löschen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              items.forEach((item) => {
+                if (item.kind === "file") {
+                  deleteFile.mutate({ fileId: item.id });
+                }
+              });
+              setSelectedIds(new Set());
+              setConfirmEmptyTrash(false);
+            }} className="bg-red-600 hover:bg-red-700">
+              Papierkorb leeren
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

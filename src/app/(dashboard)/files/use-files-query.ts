@@ -29,9 +29,10 @@ export type SortConfig = {
     direction: "asc" | "desc";
 };
 
-export function useFilesQuery({ currentFolder, sortConfig }: { currentFolder: string | null, sortConfig?: SortConfig }) {
-    const list = trpc.files.list.useQuery({ folderId: currentFolder });
-    const listFolders = trpc.folders.list.useQuery({ parentId: currentFolder });
+export function useFilesQuery({ currentFolder, sortConfig, trashed = false }: { currentFolder: string | null, sortConfig?: SortConfig, trashed?: boolean }) {
+    const list = trpc.files.list.useQuery({ folderId: currentFolder, trashed }, { enabled: !trashed });
+    const listDeleted = trpc.files.listDeleted.useQuery(undefined, { enabled: trashed });
+    const listFolders = trpc.folders.list.useQuery({ parentId: currentFolder }, { enabled: !trashed });
 
     const items = useMemo<FileItem[]>(() => {
         const folders = (listFolders.data ?? []).map((f: any) => ({
@@ -47,7 +48,8 @@ export function useFilesQuery({ currentFolder, sortConfig }: { currentFolder: st
             isGroupFolder: f.isGroupFolder
         }));
 
-        const files = (list.data ?? []).map((f) => ({
+        const filesSource = trashed ? (listDeleted.data ?? []) : (list.data ?? []);
+        const files = filesSource.map((f: any) => ({
             id: f.id,
             name: f.path,
             originalName: f.originalName,
@@ -66,7 +68,7 @@ export function useFilesQuery({ currentFolder, sortConfig }: { currentFolder: st
             kind: "file" as const
         }));
 
-        const combined = [...folders, ...files] as FileItem[];
+        const combined = trashed ? [...files] as FileItem[] : [...folders, ...files] as FileItem[];
 
         if (!sortConfig) return combined;
 
@@ -102,13 +104,17 @@ export function useFilesQuery({ currentFolder, sortConfig }: { currentFolder: st
 
             return direction === "asc" ? comparison : -comparison;
         });
-    }, [list.data, listFolders.data, sortConfig]);
+    }, [list.data, listDeleted.data, listFolders.data, sortConfig, trashed]);
 
     return {
         items,
-        isLoading: list.isLoading || listFolders.isLoading,
+        isLoading: trashed ? listDeleted.isLoading : (list.isLoading || listFolders.isLoading),
         refetch: async () => {
-            await Promise.all([list.refetch(), listFolders.refetch()]);
+            if (trashed) {
+                await listDeleted.refetch();
+            } else {
+                await Promise.all([list.refetch(), listFolders.refetch()]);
+            }
         }
     };
 }
