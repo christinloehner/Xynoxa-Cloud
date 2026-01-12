@@ -102,10 +102,10 @@ export function ApiTokensCard() {
                 }}>
                     <DialogContent className="bg-slate-900 border-slate-800">
                         <DialogHeader>
-                            <DialogTitle>Neuen API Token erstellen</DialogTitle>
-                            <DialogDescription>
-                                Geben Sie dem Token einen Namen (z.B. "MacBook Pro").
-                            </DialogDescription>
+                        <DialogTitle>Neuen API Token erstellen</DialogTitle>
+                        <DialogDescription>
+                                Geben Sie dem Token einen Namen (z.B. &quot;MacBook Pro&quot;).
+                        </DialogDescription>
                         </DialogHeader>
 
                         {!createdToken ? (

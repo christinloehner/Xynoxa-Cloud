@@ -705,7 +705,7 @@ export default function FilesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Bist du sicher?</AlertDialogTitle>
             <AlertDialogDescription>
-              Möchtest du "{deleteItem?.name}" wirklich unwiderruflich löschen?
+              Möchtest du &quot;{deleteItem?.name}&quot; wirklich unwiderruflich löschen?
               {deleteItem?.kind === "folder" && " Alle enthaltenen Dateien werden ebenfalls gelöscht."}
             </AlertDialogDescription>
           </AlertDialogHeader>

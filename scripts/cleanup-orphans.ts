@@ -17,10 +17,10 @@ async function cleanup() {
         .from(folders)
         .where(inArray(folders.name, targetNames));
 
-    console.log(`Found ${targets.length} folders to delete.`);
+    console.warn(`Found ${targets.length} folders to delete.`);
 
     for (const folder of targets) {
-        console.log(`Deleting folder: ${folder.name} (${folder.id})`);
+        console.warn(`Deleting folder: ${folder.name} (${folder.id})`);
 
         // Delete from DB
         await db.delete(folders).where(eq(folders.id, folder.id));
@@ -35,12 +35,12 @@ async function cleanup() {
             // Using the service ensures consistency.
             try {
                 await deletePath(folder.ownerId, relativePath);
-                console.log(`  - FS deleted: ${relativePath}`);
+                console.warn(`  - FS deleted: ${relativePath}`);
             } catch (e) {
                 console.error(`  - FS delete failed for ${relativePath}:`, e);
             }
         } else {
-            console.log(`  - Skipping FS deletion for folder ${folder.name} due to null ownerId.`);
+            console.warn(`  - Skipping FS deletion for folder ${folder.name} due to null ownerId.`);
         }
     }
     process.exit(0);
