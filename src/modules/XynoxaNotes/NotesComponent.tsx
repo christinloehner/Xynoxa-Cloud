@@ -132,12 +132,6 @@ export default function NotesComponent() {
     });
   }, 800);
 
-  const allTags = Array.from(new Set(viewNotes.flatMap((n: any) => n.tags.map((t: any) => t.name))));
-
-  const filteredNotes = filterTag
-    ? viewNotes.filter((n: any) => n.tags.some((t: any) => t.name === filterTag))
-    : viewNotes;
-
   const decryptNote = useCallback(
     async (note: any) => {
       if (!note.isVault) return note;
@@ -161,7 +155,13 @@ export default function NotesComponent() {
       return Promise.all((list.data as any[]).map((n: any) => decryptNote(n)));
     }
   });
-  const viewNotes = decryptedNotesQuery.data ?? [];
+  const viewNotes = useMemo(() => decryptedNotesQuery.data ?? [], [decryptedNotesQuery.data]);
+
+  const allTags = Array.from(new Set(viewNotes.flatMap((n: any) => n.tags.map((t: any) => t.name))));
+
+  const filteredNotes = filterTag
+    ? viewNotes.filter((n: any) => n.tags.some((t: any) => t.name === filterTag))
+    : viewNotes;
 
   // Öffne Note direkt über Query-Param ?open=<id>
   const autoNote = useMemo(
