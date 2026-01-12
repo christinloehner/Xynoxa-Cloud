@@ -1,5 +1,11 @@
 # Xynoxa Cloud
 
+![CI](https://github.com/christinloehner/Xynoxa-Cloud/actions/workflows/ci.yml/badge.svg)
+![Release](https://img.shields.io/github/v/release/christinloehner/Xynoxa-Cloud)
+![License](https://img.shields.io/github/license/christinloehner/Xynoxa-Cloud)
+![Node](https://img.shields.io/node/v/next?label=node)
+![Last Commit](https://img.shields.io/github/last-commit/christinloehner/Xynoxa-Cloud)
+
 A modern, self‑hosted personal cloud: files, notes, bookmarks, calendar, tasks, vault, and semantic search — in one clean UI.
 
 - Modern UX (Next.js + Tailwind + shadcn/ui)
