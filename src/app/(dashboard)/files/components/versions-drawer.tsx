@@ -28,11 +28,6 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
   const [fromId, setFromId] = useState<string | null>(null);
   const [toId, setToId] = useState<string | null>(null);
 
-  const diffQuery = trpc.files.diff.useQuery(
-    { fileId: file?.id || "", fromVersionId: activeFromId || "", toVersionId: activeToId || "" },
-    { enabled: !!file && !!activeFromId && !!activeToId && open }
-  );
-
   const restore = trpc.files.restoreVersion.useMutation({ onSuccess: () => versionsQuery.refetch() });
 
   const versions = useMemo(() => versionsQuery.data ?? [], [versionsQuery.data]);
@@ -43,6 +38,12 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
   }, [versions]);
   const activeToId = versions.some((v) => v.id === toId) ? toId : defaultIds.to;
   const activeFromId = versions.some((v) => v.id === fromId) ? fromId : defaultIds.from;
+
+  const diffQuery = trpc.files.diff.useQuery(
+    { fileId: file?.id || "", fromVersionId: activeFromId || "", toVersionId: activeToId || "" },
+    { enabled: !!file && !!activeFromId && !!activeToId && open }
+  );
+
   const loading = versionsQuery.isLoading || diffQuery.isLoading;
 
   const selectedTo = useMemo(() => versions.find((v) => v.id === activeToId), [versions, activeToId]);

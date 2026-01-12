@@ -402,7 +402,17 @@ export default function ProfileClient() {
     publicProfile: profile.data?.publicProfile ?? false,
     profileUrl: profile.data?.profileUrl ?? ""
   }), [profile.data]);
-  const formKey = useMemo(() => profile.data?.updatedAt || profile.data?.userId || "profile-empty", [profile.data]);
+  const formKey = useMemo(() => {
+    if (!profile.data) return "profile-empty";
+    return [
+      profile.data.userId,
+      profile.data.displayName ?? "",
+      profile.data.avatarUrl ?? "",
+      profile.data.bio ?? "",
+      profile.data.profileUrl ?? "",
+      profile.data.publicProfile ? "1" : "0"
+    ].join("|");
+  }, [profile.data]);
 
   return (
     <ProfileForm

@@ -176,7 +176,7 @@ export default function CalendarPage() {
 
   const updateTaskDraft = (patch: Partial<any>) => {
     if (!taskInView && !selectedTask) return;
-    setSelectedTask((prev) => ({ ...(prev ?? taskInView), ...patch }));
+    setSelectedTask((prev: any) => ({ ...(prev ?? taskInView), ...patch }));
   };
 
   const handleTaskDialogChange = (open: boolean) => {

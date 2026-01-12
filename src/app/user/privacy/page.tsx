@@ -102,7 +102,19 @@ export default function PrivacySettingsPage() {
     showOccupation: !!profile.data?.showOccupation,
     showCity: !!profile.data?.showCity
   }), [profile.data]);
-  const formKey = useMemo(() => profile.data?.updatedAt || profile.data?.userId || "privacy-empty", [profile.data]);
+  const formKey = useMemo(() => {
+    if (!profile.data) return "privacy-empty";
+    return [
+      profile.data.userId,
+      profile.data.showEmail ? "1" : "0",
+      profile.data.showBirthDate ? "1" : "0",
+      profile.data.showBirthPlace ? "1" : "0",
+      profile.data.showPhone ? "1" : "0",
+      profile.data.showAddress ? "1" : "0",
+      profile.data.showOccupation ? "1" : "0",
+      profile.data.showCity ? "1" : "0"
+    ].join("|");
+  }, [profile.data]);
 
   return (
     <PrivacyForm key={formKey} initialState={initialState} update={update} />

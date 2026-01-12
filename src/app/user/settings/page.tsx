@@ -20,6 +20,11 @@ type CalSel = {
   isPrimary?: boolean;
 };
 
+type CalendarStatusData = {
+  connected: boolean;
+  channelExpiresAt?: string | number | Date | null;
+};
+
 function UserSettingsForm({
   calendarStatus,
   connectUrl,
@@ -117,6 +122,7 @@ function UserSettingsForm({
   const isReindexCompleted = reindexStatus?.status === "completed";
   const isReindexFailed = reindexStatus?.status === "failed";
   const reindexProgress = typeof reindexStatus?.progress === "number" ? reindexStatus.progress : 0;
+  const status = calendarStatus.data as CalendarStatusData | undefined;
 
   return (
     <div className="space-y-6">
@@ -135,17 +141,18 @@ function UserSettingsForm({
             </div>
             <div className="text-sm text-slate-600 dark:text-slate-300">
               Status:{" "}
-              <span className={calendarStatus.data?.connected ? "text-emerald-400" : "text-amber-300"}>
-                {calendarStatus.data?.connected ? "verbunden" : "nicht verbunden"}
+              <span className={status?.connected ? "text-emerald-400" : "text-amber-300"}>
+                {status?.connected ? "verbunden" : "nicht verbunden"}
               </span>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            {!calendarStatus.data?.connected ? (
+            {!status?.connected ? (
               <Button
                 onClick={async () => {
                   const res = await connectUrl.refetch();
-                  if (res.data?.url) window.location.href = res.data.url;
+                  const data = res.data as { url?: string } | undefined;
+                  if (data?.url) window.location.href = data.url;
                 }}
               >
                 Mit Google verbinden
@@ -162,13 +169,13 @@ function UserSettingsForm({
                   Verbindung trennen
                 </Button>
                 <p className="text-xs text-slate-500 dark:text-slate-500">
-                  Channel läuft bis {calendarStatus.data?.channelExpiresAt ? new Date(calendarStatus.data.channelExpiresAt).toLocaleString("de-DE") : "–"}
+                  Channel läuft bis {status?.channelExpiresAt ? new Date(status.channelExpiresAt).toLocaleString("de-DE") : "–"}
                 </p>
               </>
             )}
           </div>
 
-          {calendarStatus.data?.connected && (
+          {status?.connected && (
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-500 dark:text-slate-300">Wähle Kalender und Farben.</p>

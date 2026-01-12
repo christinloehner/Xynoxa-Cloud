@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc-client";
 import { HardDrive, Cpu, Activity, Clock } from "lucide-react";
@@ -43,12 +43,16 @@ export function SystemMonitor() {
     }>({ cpu: [], memory: [], timestamps: [] });
 
     const { data: stats } = trpc.system.stats.useQuery(undefined, {
-        refetchInterval: 2000,
-        onSuccess: (data) => {
+        refetchInterval: 2000
+    });
+
+    useEffect(() => {
+        if (!stats) return;
+        const timer = window.setTimeout(() => {
             setHistory((prev) => {
                 const now = Date.now();
-                const cpuLoad = (data.cpu.loadAvg[0] / data.cpu.cores) * 100;
-                const memUsage = (data.memory.used / data.memory.total) * 100;
+                const cpuLoad = (stats.cpu.loadAvg[0] / stats.cpu.cores) * 100;
+                const memUsage = (stats.memory.used / stats.memory.total) * 100;
 
                 const newCpu = [...prev.cpu, cpuLoad].slice(-30);
                 const newMem = [...prev.memory, memUsage].slice(-30);
@@ -56,8 +60,10 @@ export function SystemMonitor() {
 
                 return { cpu: newCpu, memory: newMem, timestamps: newTime };
             });
-        }
-    });
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [stats]);
 
     if (!stats) return null;
 
