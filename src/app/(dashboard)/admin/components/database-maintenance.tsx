@@ -2,11 +2,12 @@
  * Copyright (C) 2025 Christin Löhner
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, HardDrive, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 type JobType = "orphan" | "reset";
 
@@ -22,6 +23,9 @@ export function DatabaseMaintenance() {
         return { orphan: orphanId, reset: resetId };
     });
     const [isStarting, setIsStarting] = useState<{ orphan?: boolean; reset?: boolean }>({});
+    const [folderName, setFolderName] = useState("");
+    const [searchName, setSearchName] = useState<string | null>(null);
+    const [folderResults, setFolderResults] = useState<{ id: string; name: string; path: string }[]>([]);
 
     const statusOrphan = trpc.maintenance.status.useQuery(
         { jobId: jobIds.orphan! },
@@ -56,6 +60,21 @@ export function DatabaseMaintenance() {
         }
     });
 
+    const findFoldersQuery = trpc.maintenance.findFoldersByName.useQuery(
+        { name: searchName ?? "" },
+        { enabled: !!searchName }
+    );
+
+    const deleteFolderMutation = trpc.maintenance.forceDeleteFolder.useMutation({
+        onSuccess: (_data, variables) => {
+            toast.success("Ordner gelöscht.");
+            setFolderResults((items) => items.filter((i) => i.id !== variables.id));
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        }
+    });
+
     const startOrphan = () => {
         setIsStarting((s) => ({ ...s, orphan: true }));
         orphanMutation.mutate();
@@ -70,6 +89,33 @@ export function DatabaseMaintenance() {
         setIsStarting((s) => ({ ...s, reset: true }));
         resetMutation.mutate({ confirm: text });
     };
+
+    const findFolders = () => {
+        const name = folderName.trim();
+        if (!name) {
+            toast.error("Bitte Ordnernamen eingeben.");
+            return;
+        }
+        setSearchName(name);
+    };
+
+    const forceDelete = (id: string) => {
+        const text = prompt('Sicher? Tippe bitte genau: DELETE FOLDER');
+        if (text !== "DELETE FOLDER") {
+            toast.error("Abgebrochen. Bestätigung fehlt.");
+            return;
+        }
+        deleteFolderMutation.mutate({ id, confirm: text });
+    };
+
+    useEffect(() => {
+        if (!findFoldersQuery.data) return;
+        const items = findFoldersQuery.data.items ?? [];
+        setFolderResults(items);
+        if (!items.length) {
+            toast.message("Keine Ordner gefunden.");
+        }
+    }, [findFoldersQuery.data]);
 
     const orphanState = jobState(statusOrphan.data);
     const resetState = jobState(statusReset.data);
@@ -128,6 +174,55 @@ export function DatabaseMaintenance() {
                 </div>
                 {resetState.show && (
                     <StatusBar state={resetState} onClear={() => clearJob("reset", setJobIds)} danger />
+                )}
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-amber-900/40 bg-amber-900/10 p-3">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-300" />
+                    <div>
+                        <p className="text-sm text-amber-100 font-semibold">Ordner gezielt löschen (Fallback)</p>
+                        <p className="text-xs text-amber-200/80">
+                            Nur verwenden, wenn ein Ordner im UI nicht löschbar ist.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <Input
+                        value={folderName}
+                        onChange={(e) => setFolderName(e.target.value)}
+                        placeholder="Ordnername (exakt)"
+                        className="bg-slate-900/40 border-slate-700"
+                    />
+                    <Button
+                        size="sm"
+                        onClick={findFolders}
+                        disabled={findFoldersQuery.isFetching}
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                        {findFoldersQuery.isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Suchen
+                    </Button>
+                </div>
+                {folderResults.length > 0 && (
+                    <div className="space-y-2 text-xs text-amber-100/90">
+                        {folderResults.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between gap-2 rounded-md border border-amber-900/30 bg-amber-950/30 p-2">
+                                <div className="min-w-0">
+                                    <p className="truncate text-amber-100">{item.path}</p>
+                                    <p className="truncate text-amber-200/70">{item.id}</p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => forceDelete(item.id)}
+                                    disabled={deleteFolderMutation.isLoading}
+                                >
+                                    Löschen
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
         </div>
