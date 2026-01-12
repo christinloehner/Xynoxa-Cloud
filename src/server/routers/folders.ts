@@ -10,6 +10,7 @@ import { requireRole } from "@/server/middleware/rbac";
 import { indexDocument, updateDocument, deleteDocument, INDEXES } from "@/server/services/search";
 import { resolveFolderPath } from "@/server/services/folder-paths";
 import { createDirectory, movePath, deletePath } from "@/server/services/storage";
+import { sanitizeFolderName } from "@/server/services/path-normalize";
 import { recordChange } from "@/server/services/sync-journal";
 
 async function hasGroupFolderAccess(db: any, userId: string, groupFolderId: string) {
@@ -291,6 +292,7 @@ export const foldersRouter = router({
         // Fallback if not encoded or invalid
         console.warn("Failed to decode folder name:", input.name);
       }
+      name = sanitizeFolderName(name);
 
       // Gruppenordner sind virtuell und dürfen nicht als "echte" Root-Ordner erstellt werden.
       if (!input.parentId) {
@@ -426,6 +428,7 @@ export const foldersRouter = router({
       } catch (e) {
         // Ignore
       }
+      name = sanitizeFolderName(name);
 
       const parentPath = await resolveFolderPath(ctx.userId!, current.parentId);
       const oldRelativePath = parentPath ? `${parentPath}/${current.name}` : current.name;
@@ -680,7 +683,11 @@ export const foldersRouter = router({
 
       // 4. Delete from Disk
       // Because storage structure mimics DB structure, deleting the root folder path deletes everything inside.
-      await deletePath(ctx.userId!, relativePath);
+      try {
+        await deletePath(ctx.userId!, relativePath);
+      } catch (e) {
+        console.error("Folder deletePath failed, continuing with DB cleanup.", e);
+      }
 
       // 5. Delete from DB
       await ctx.db.delete(folders).where(inArray(folders.id, allFolderIds));

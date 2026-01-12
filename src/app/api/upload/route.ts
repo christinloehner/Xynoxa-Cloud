@@ -16,11 +16,11 @@ import { enqueueThumbnailJob } from "@/server/services/thumbnails";
 import crypto from "crypto";
 import { getUserFromRequest } from "@/server/auth/api-helper";
 import { recordChange } from "@/server/services/sync-journal";
-import { basename, dirname } from "path";
 import { ensureFolderPath, ensureGroupFolderPath, findAccessibleGroupFolderByName } from "@/server/services/folder-paths";
 import { logFileUpload, logFileUpdate } from "@/server/services/file-activities";
 import { upsertEmbedding } from "@/server/services/embeddings";
 import { extractText, saveExtractedText, sanitizeTextForIndex } from "@/server/services/extract";
+import { normalizeClientPath, splitClientPath } from "@/server/services/path-normalize";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
 
@@ -282,8 +282,17 @@ export async function POST(req: NextRequest) {
 
     // Resolve Directory Structure from Filename
     const rawName = originalName ?? file.name;
-    const fileName = basename(rawName);
-    const dirName = dirname(rawName);
+    let normalizedName: string;
+    try {
+      normalizedName = normalizeClientPath(rawName);
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || "Ungültiger Pfad" }, { status: 400 });
+    }
+
+    const { fileName, dirName } = splitClientPath(normalizedName);
+    if (!fileName) {
+      return NextResponse.json({ error: "Ungültiger Dateiname" }, { status: 400 });
+    }
 
     if (!folderId && dirName !== "." && dirName !== "/") {
       const parts = dirName.split("/").filter(Boolean);

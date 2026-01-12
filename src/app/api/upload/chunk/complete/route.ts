@@ -9,7 +9,7 @@ import { db } from "@/server/db";
 import { uploadSessions, files, fileVersions, fileVersionChunks } from "@/server/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { readFile, unlink } from "fs/promises";
-import { join, basename, dirname } from "path";
+import { join } from "path";
 import { saveFileFromPath, formatBytes } from "@/server/services/storage";
 import { indexDocument, INDEXES } from "@/server/services/search";
 import { upsertEmbedding } from "@/server/services/embeddings";
@@ -22,6 +22,7 @@ import { enqueueThumbnailJob } from "@/server/services/thumbnails";
 import { logInfo, logError, logUpload } from "@/server/services/logger";
 import { createHash } from "crypto";
 import { ensureChunk } from "@/server/services/chunk-store";
+import { normalizeClientPath, splitClientPath } from "@/server/services/path-normalize";
 
 const CHUNK_DIR = join(process.cwd(), "storage", "chunks");
 const MAX_EXTRACT_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -301,8 +302,17 @@ export async function POST(req: NextRequest) {
     let ownerId: string | null = userId;
 
     const rawName = sessionRow.originalName ?? sessionRow.filename;
-    const fileName = basename(rawName);
-    const dirName = dirname(rawName);
+    let normalizedName: string;
+    try {
+      normalizedName = normalizeClientPath(rawName);
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || "Ungültiger Pfad" }, { status: 400 });
+    }
+
+    const { fileName, dirName } = splitClientPath(normalizedName);
+    if (!fileName) {
+      return NextResponse.json({ error: "Ungültiger Dateiname" }, { status: 400 });
+    }
 
     if (sessionRow.isVault) {
       const vaultFolder = await ensureVaultFolder(db, userId);

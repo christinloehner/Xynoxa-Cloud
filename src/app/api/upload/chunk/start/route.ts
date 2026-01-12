@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { uploadSessions } from "@/server/db/schema";
 import { randomUUID } from "crypto";
+import { normalizeClientPath } from "@/server/services/path-normalize";
 
 import { getUserFromRequest } from "@/server/auth/api-helper";
 
@@ -71,12 +72,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "IV required for vault upload" }, { status: 400 });
   }
 
+  let normalizedFilename: string;
+  let normalizedOriginalName: string | null = null;
+  try {
+    normalizedFilename = normalizeClientPath(filename);
+    if (originalName) {
+      normalizedOriginalName = normalizeClientPath(originalName);
+    }
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Ungültiger Pfad" }, { status: 400 });
+  }
+
   const id = randomUUID();
   await db.insert(uploadSessions).values({
     id,
     userId,
-    filename,
-    originalName: originalName ?? filename,
+    filename: normalizedFilename,
+    originalName: normalizedOriginalName ?? normalizedFilename,
     mime,
     size,
     totalChunks,
