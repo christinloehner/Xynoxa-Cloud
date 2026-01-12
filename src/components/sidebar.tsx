@@ -12,7 +12,7 @@ import { File, Search, Shield, Settings, Users2, UsersRound, LogOut, Sun, Moon, 
 import { trpc } from "@/lib/trpc-client";
 import { motion } from "framer-motion";
 import { useTheme } from "@/lib/theme-context";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ModuleAdminNavigationItem, ModuleNavigationItem } from "@/types/module";
 import { CLIENT_MODULES } from "@/lib/module-registry.client";
 
@@ -42,14 +42,14 @@ export function Sidebar({ userRole }: { userRole?: string }) {
   const isAdmin = userRole === 'admin' || userRole === 'owner';
 
   // Lade Module Navigation
-  const roleAllows = (required?: "admin" | "owner" | "user") => {
+  const roleAllows = useCallback((required?: "admin" | "owner" | "user") => {
     if (!required) return true;
     if (!userRole) return false;
     if (userRole === "owner") return true;
     if (userRole === "admin" && (required === "admin" || required === "user")) return true;
     if (userRole === "user" && required === "user") return true;
     return required === userRole;
-  };
+  }, [userRole]);
 
   useEffect(() => {
     const loadModuleNav = () => {
@@ -108,7 +108,7 @@ export function Sidebar({ userRole }: { userRole?: string }) {
     };
     
     if (activeModules.data !== undefined) loadModuleNav();
-  }, [userRole, activeModules.data]);
+  }, [activeModules.data, roleAllows]);
 
   // Baue die komplette Navigation zusammen:
   // 1. Top-Links (Dashboard, Dateiverwaltung)

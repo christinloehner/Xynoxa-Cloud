@@ -4,8 +4,9 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,11 @@ export default function BookmarkDetailComponent({ bookmarkId }: BookmarkDetailCo
   const [editTagInput, setEditTagInput] = useState("");
   const [autosave, setAutosave] = useState<"idle" | "saving" | "gespeichert">("idle");
   const [shareOpen, setShareOpen] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
+
+  useEffect(() => {
+    setFaviconError(false);
+  }, [bookmark.data?.faviconUrl]);
 
   const autoSave = useDebouncedCallback(() => {
     if (!bookmark.data || !isEditing) return;
@@ -172,14 +178,15 @@ export default function BookmarkDetailComponent({ bookmarkId }: BookmarkDetailCo
       <Card>
         <CardHeader>
           <div className="flex items-start gap-4">
-            {b.faviconUrl && (
-              <img
+            {b.faviconUrl && !faviconError && (
+              <Image
                 src={b.faviconUrl}
                 alt=""
-                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
+                onError={() => setFaviconError(true)}
+                unoptimized
               />
             )}
             <div className="flex-1 min-w-0">

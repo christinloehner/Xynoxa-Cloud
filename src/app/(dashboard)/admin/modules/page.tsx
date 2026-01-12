@@ -13,6 +13,7 @@ import { Loader2, Package, CheckCircle2, XCircle, AlertTriangle, RefreshCw } fro
 import { useToast } from "@/components/ui/toast";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import Image from "next/image";
 
 export default function AdminModulesPage() {
   const [activatingModule, setActivatingModule] = useState<string | null>(null);
@@ -220,10 +221,13 @@ export default function AdminModulesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {module.logoUrl ? (
-                      <img 
-                        src={module.logoUrl} 
+                      <Image
+                        src={module.logoUrl}
                         alt={module.name}
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-lg object-cover"
+                        unoptimized
                       />
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700">

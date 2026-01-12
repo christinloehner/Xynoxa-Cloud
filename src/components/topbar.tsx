@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Bell, CircleUserRound, Sun, Moon, Check, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ModuleUserMenuItem } from "@/types/module";
 import { useTheme } from "@/lib/theme-context";
 import { CLIENT_MODULES } from "@/lib/module-registry.client";
@@ -173,14 +173,14 @@ export function Topbar({ userRole }: { userRole?: string }) {
     };
   }, []);
 
-  const roleAllows = (required?: "admin" | "owner" | "user") => {
+  const roleAllows = useCallback((required?: "admin" | "owner" | "user") => {
     if (!required) return true;
     if (!userRole) return false;
     if (userRole === "owner") return true;
     if (userRole === "admin" && (required === "admin" || required === "user")) return true;
     if (userRole === "user" && required === "user") return true;
     return required === userRole;
-  };
+  }, [userRole]);
 
   useEffect(() => {
     const loadModuleUserNav = () => {
@@ -220,7 +220,7 @@ export function Topbar({ userRole }: { userRole?: string }) {
     };
 
     if (activeModules.data !== undefined) loadModuleUserNav();
-  }, [activeModules.data, userRole]);
+  }, [activeModules.data, roleAllows]);
 
   const handleMarkRead = (id?: string) => {
     markRead.mutate(id ? { ids: [id] } : undefined);

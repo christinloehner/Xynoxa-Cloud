@@ -141,8 +141,8 @@ export default function CalendarPage() {
     importICS.mutate({ ics: text });
   };
 
-  const events = (eventsQuery.data as any[]) ?? [];
-  const tasks = (tasksQuery.data as any[]) ?? [];
+  const events = useMemo(() => (eventsQuery.data as any[]) ?? [], [eventsQuery.data]);
+  const tasks = useMemo(() => (tasksQuery.data as any[]) ?? [], [tasksQuery.data]);
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);

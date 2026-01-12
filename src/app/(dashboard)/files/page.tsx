@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useFilesQuery, FileItem, SortConfig } from "./use-files-query";
 import { FileList } from "./components/file-list";
@@ -218,10 +218,10 @@ export default function FilesPage() {
     setSelectedIds(new Set());
   };
 
-  const handleOpenVersions = (item: FileItem) => {
+  const handleOpenVersions = useCallback((item: FileItem) => {
     if (item.kind !== "file") return;
     setVersionsFile(item);
-  };
+  }, []);
 
   // Close file viewer and clean URL
   const handleCloseViewer = () => {
@@ -297,7 +297,7 @@ export default function FilesPage() {
     return isKnownTextMime || textExtensions.includes(ext);
   };
 
-  const openInVsCode = async (file: FileItem) => {
+  const openInVsCode = useCallback(async (file: FileItem) => {
     try {
       setVsCodeLoading(true);
       const response = await fetch("/api/vscode/open", {
@@ -326,16 +326,16 @@ export default function FilesPage() {
     finally {
       setVsCodeLoading(false);
     }
-  };
+  }, [push]);
 
 
-  const handleDownload = (item: FileItem) => {
+  const handleDownload = useCallback((item: FileItem) => {
     if (item.kind === "folder") {
       push({ title: "Info", description: "Bitte erst einen Share-Link für den Ordner erstellen und dort herunterladen.", tone: "default" });
       return;
     }
     window.open(`/api/files/download?id=${item.id}`, '_blank');
-  };
+  }, [push]);
 
 
   // Vault
@@ -355,7 +355,7 @@ export default function FilesPage() {
     }
   };
 
-  const handleToggleVault = (item: FileItem) => {
+  const handleToggleVault = useCallback((item: FileItem) => {
     if (item.kind === "folder") {
       push({ title: "Info", description: "Ordner Vault noch nicht unterstützt", tone: "default" });
       return;
@@ -374,7 +374,7 @@ export default function FilesPage() {
 
     // Disabling vault?
     toggleVault.mutate({ id: item.id, vault: !item.vault });
-  };
+  }, [hasKey, push, toggleVault]);
 
   const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
 
@@ -511,7 +511,7 @@ export default function FilesPage() {
     } else {
       setRightSidebar(null);
     }
-  }, [selectedIds, items, setRightSidebar, push, viewingFile]);
+  }, [selectedIds, items, setRightSidebar, viewingFile, handleDownload, handleOpenVersions, handleToggleVault, openInVsCode]);
 
   useEffect(() => {
     return () => setRightSidebar(null);

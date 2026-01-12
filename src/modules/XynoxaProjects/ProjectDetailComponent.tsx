@@ -1290,7 +1290,16 @@ function TaskSettingsModal({
     setMilestoneId(task.milestoneId ?? "");
     setTags((task.tags ?? []).join(", "));
     setDueAt(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 10) : "");
-  }, [task.id]);
+  }, [
+    task.title,
+    task.description,
+    task.priority,
+    task.assigneeId,
+    task.sectionId,
+    task.milestoneId,
+    task.tags,
+    task.dueAt
+  ]);
 
   return (
     <Dialog open onOpenChange={onClose}>

@@ -61,7 +61,10 @@ export default function TaskDetailPage({ taskId }: { taskId: string }) {
   const [replyText, setReplyText] = useState("");
 
   const task = taskQuery.data as any;
-  const comments = (commentsQuery.data as any[] | undefined) ?? [];
+  const comments = useMemo(
+    () => (commentsQuery.data as any[] | undefined) ?? [],
+    [commentsQuery.data]
+  );
 
   const threaded = useMemo(() => {
     const map = new Map<string, any>();

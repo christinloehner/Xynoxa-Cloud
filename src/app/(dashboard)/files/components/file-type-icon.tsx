@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
     File as FileIcon,
     FileText,
@@ -76,11 +77,14 @@ export function FileTypeIcon({ item, size = 32, variant = "list" }: Props) {
     if (showThumb) {
         return (
             <div className={className} style={{ width: size, height: size }}>
-                <img
+                <Image
                     src={`/api/files/thumbnail?fileId=${item.id}&size=${Math.min(size, 64)}`}
                     alt={item.name}
+                    width={size}
+                    height={size}
                     className="h-full w-full object-cover"
                     onError={() => setThumbError(true)}
+                    unoptimized
                 />
             </div>
         );

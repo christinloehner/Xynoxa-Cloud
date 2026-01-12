@@ -42,7 +42,7 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
 
   const restore = trpc.files.restoreVersion.useMutation({ onSuccess: () => versionsQuery.refetch() });
 
-  const versions = versionsQuery.data ?? [];
+  const versions = useMemo(() => versionsQuery.data ?? [], [versionsQuery.data]);
   const loading = versionsQuery.isLoading || diffQuery.isLoading;
 
   const selectedTo = useMemo(() => versions.find((v) => v.id === toId), [versions, toId]);
