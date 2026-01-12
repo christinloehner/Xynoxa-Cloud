@@ -5,7 +5,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc-client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,9 +20,10 @@ export default function AdminGroupsPage() {
 
   const groups = trpc.groups.list.useQuery();
   const users = trpc.users.list.useQuery();
+  const activeGroupId = selectedGroup ?? groups.data?.[0]?.id ?? null;
   const members = trpc.groups.listMembers.useQuery(
-    { groupId: selectedGroup! },
-    { enabled: !!selectedGroup }
+    { groupId: activeGroupId! },
+    { enabled: !!activeGroupId }
   );
 
   const createGroup = trpc.groups.create.useMutation({
@@ -56,11 +57,6 @@ export default function AdminGroupsPage() {
 
 
 
-  useEffect(() => {
-    if (!selectedGroup && groups.data?.length) {
-      setSelectedGroup(groups.data[0].id);
-    }
-  }, [selectedGroup, groups.data]);
 
   return (
     <div className="space-y-6">
@@ -120,7 +116,7 @@ export default function AdminGroupsPage() {
               <div
                 key={g.id}
                 onClick={() => setSelectedGroup(g.id)}
-                className={`p-4 rounded-lg border cursor-pointer transition ${selectedGroup === g.id
+                className={`p-4 rounded-lg border cursor-pointer transition ${activeGroupId === g.id
                   ? "border-cyan-500 bg-cyan-500/10"
                   : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
                   }`}
@@ -153,7 +149,7 @@ export default function AdminGroupsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-100">Mitglieder</h2>
-            {selectedGroup && (
+            {activeGroupId && (
               <Dialog open={memberOpen} onOpenChange={setMemberOpen}>
                 <DialogTrigger asChild>
                   <button className="text-sm text-cyan-300 hover:text-cyan-200">
@@ -163,13 +159,13 @@ export default function AdminGroupsPage() {
                 <DialogContent className="bg-slate-900 border-slate-800">
                   <DialogHeader>
                     <DialogTitle className="text-slate-50">
-                      Mitglied zu &quot;{groups.data?.find(g => g.id === selectedGroup)?.name}&quot; hinzufügen
+                      Mitglied zu &quot;{groups.data?.find(g => g.id === activeGroupId)?.name}&quot; hinzufügen
                     </DialogTitle>
                   </DialogHeader>
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      addMember.mutate({ groupId: selectedGroup, userId: memberData.userId });
+                      addMember.mutate({ groupId: activeGroupId, userId: memberData.userId });
                     }}
                     className="space-y-4"
                   >
@@ -204,7 +200,7 @@ export default function AdminGroupsPage() {
             )}
           </div>
 
-          {!selectedGroup ? (
+          {!activeGroupId ? (
             <p className="text-sm text-slate-400 text-center py-8">
               Wähle eine Gruppe aus, um Mitglieder zu sehen
             </p>

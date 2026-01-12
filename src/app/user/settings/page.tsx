@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,31 +20,38 @@ type CalSel = {
   isPrimary?: boolean;
 };
 
-export default function UserSettingsPage() {
-  const calendarStatus = trpc.calendar.integrationStatus.useQuery();
-  const connectUrl = trpc.calendar.connectGoogleUrl.useQuery(undefined, { enabled: false });
-  const syncNow = trpc.calendar.syncGoogle.useMutation();
-  const googleCalendars = trpc.calendar.googleCalendars.useQuery(undefined, { enabled: !!calendarStatus.data?.connected });
-  const refreshGoogleCalendars = trpc.calendar.refreshGoogleCalendars.useMutation({
-    onSuccess: () => googleCalendars.refetch()
+function UserSettingsForm({
+  calendarStatus,
+  connectUrl,
+  syncNow,
+  googleCalendars,
+  refreshGoogleCalendars,
+  saveGoogleCalendars,
+  updateProfile,
+  disconnect,
+  initialCalendarSelection,
+  initialSearchIndexing
+}: {
+  calendarStatus: ReturnType<typeof trpc.calendar.integrationStatus.useQuery>;
+  connectUrl: ReturnType<typeof trpc.calendar.connectGoogleUrl.useQuery>;
+  syncNow: ReturnType<typeof trpc.calendar.syncGoogle.useMutation>;
+  googleCalendars: ReturnType<typeof trpc.calendar.googleCalendars.useQuery>;
+  refreshGoogleCalendars: ReturnType<typeof trpc.calendar.refreshGoogleCalendars.useMutation>;
+  saveGoogleCalendars: ReturnType<typeof trpc.calendar.saveGoogleCalendars.useMutation>;
+  updateProfile: ReturnType<typeof trpc.profile.update.useMutation>;
+  disconnect: ReturnType<typeof trpc.calendar.disconnectGoogle.useMutation>;
+  initialCalendarSelection: CalSel[];
+  initialSearchIndexing: boolean;
+}) {
+  const [calendarSelection, setCalendarSelection] = useState<CalSel[]>(initialCalendarSelection);
+  const [searchIndexing, setSearchIndexing] = useState(initialSearchIndexing);
+  const [reindexJobId, setReindexJobId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return (
+      localStorage.getItem("xynoxa-user-reindex-job") ||
+      localStorage.getItem("xynoxa-user-reindex-job")
+    );
   });
-  const saveGoogleCalendars = trpc.calendar.saveGoogleCalendars.useMutation({
-    onSuccess: () => googleCalendars.refetch()
-  });
-  const profile = trpc.profile.get.useQuery();
-  const updateProfile = trpc.profile.update.useMutation({
-    onSuccess: () => profile.refetch()
-  });
-  const disconnect = trpc.calendar.disconnectGoogle.useMutation({
-    onSuccess: () => {
-      calendarStatus.refetch();
-      googleCalendars.refetch();
-    }
-  });
-
-  const [calendarSelection, setCalendarSelection] = useState<CalSel[]>([]);
-  const [searchIndexing, setSearchIndexing] = useState(true);
-  const [reindexJobId, setReindexJobId] = useState<string | null>(null);
   const [isStartingReindex, setIsStartingReindex] = useState(false);
 
   const reindexMutation = trpc.search.reindexSelf.useMutation({
@@ -69,34 +76,6 @@ export default function UserSettingsPage() {
       }
     }
   );
-
-  useEffect(() => {
-    if (googleCalendars.data) {
-      setCalendarSelection(
-        googleCalendars.data.map((c) => ({
-          calendarId: c.calendarId,
-          summary: c.summary,
-          isSelected: c.isSelected,
-          color: c.color ?? "#45E6C5",
-          isDefault: c.isDefault,
-          isPrimary: c.isPrimary
-        }))
-      );
-    }
-  }, [googleCalendars.data]);
-
-  useEffect(() => {
-    if (profile.data) {
-      setSearchIndexing(profile.data.searchAutoReindex ?? true);
-    }
-  }, [profile.data]);
-
-  useEffect(() => {
-    const stored =
-      localStorage.getItem("xynoxa-user-reindex-job") ||
-      localStorage.getItem("xynoxa-user-reindex-job");
-    if (stored) setReindexJobId(stored);
-  }, []);
 
   const handleSaveCalendars = () => {
     const withDefault = calendarSelection.some((c) => c.isDefault);
@@ -300,5 +279,63 @@ export default function UserSettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UserSettingsPage() {
+  const calendarStatus = trpc.calendar.integrationStatus.useQuery();
+  const connectUrl = trpc.calendar.connectGoogleUrl.useQuery(undefined, { enabled: false });
+  const syncNow = trpc.calendar.syncGoogle.useMutation();
+  const googleCalendars = trpc.calendar.googleCalendars.useQuery(undefined, { enabled: !!calendarStatus.data?.connected });
+  const refreshGoogleCalendars = trpc.calendar.refreshGoogleCalendars.useMutation({
+    onSuccess: () => googleCalendars.refetch()
+  });
+  const saveGoogleCalendars = trpc.calendar.saveGoogleCalendars.useMutation({
+    onSuccess: () => googleCalendars.refetch()
+  });
+  const profile = trpc.profile.get.useQuery();
+  const updateProfile = trpc.profile.update.useMutation({
+    onSuccess: () => profile.refetch()
+  });
+  const disconnect = trpc.calendar.disconnectGoogle.useMutation({
+    onSuccess: () => {
+      calendarStatus.refetch();
+      googleCalendars.refetch();
+    }
+  });
+
+  const initialCalendarSelection = useMemo<CalSel[]>(() => {
+    if (!googleCalendars.data) return [];
+    return googleCalendars.data.map((c) => ({
+      calendarId: c.calendarId,
+      summary: c.summary,
+      isSelected: c.isSelected,
+      color: c.color ?? "#45E6C5",
+      isDefault: c.isDefault,
+      isPrimary: c.isPrimary
+    }));
+  }, [googleCalendars.data]);
+  const initialSearchIndexing = profile.data?.searchAutoReindex ?? true;
+  const formKey = useMemo(() => {
+    const calKey = (googleCalendars.data ?? [])
+      .map((c) => `${c.calendarId}:${c.isSelected}:${c.color ?? ""}:${c.isDefault}`)
+      .join("|");
+    return `${calendarStatus.data?.connected}-${calKey}-${initialSearchIndexing}`;
+  }, [calendarStatus.data?.connected, googleCalendars.data, initialSearchIndexing]);
+
+  return (
+    <UserSettingsForm
+      key={formKey}
+      calendarStatus={calendarStatus}
+      connectUrl={connectUrl}
+      syncNow={syncNow}
+      googleCalendars={googleCalendars}
+      refreshGoogleCalendars={refreshGoogleCalendars}
+      saveGoogleCalendars={saveGoogleCalendars}
+      updateProfile={updateProfile}
+      disconnect={disconnect}
+      initialCalendarSelection={initialCalendarSelection}
+      initialSearchIndexing={initialSearchIndexing}
+    />
   );
 }

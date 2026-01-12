@@ -10,9 +10,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Link from "next/link";
 import { useTheme } from "@/lib/theme-context";
 import clsx from "clsx";
+import type { ComponentType, ReactNode } from "react";
 import { SystemMonitor } from "./components/system-monitor";
 import { SearchIndexManager } from "./components/search-index-manager";
 import { DatabaseMaintenance } from "./components/database-maintenance";
+
+function AdminWidget({ title, value, icon: Icon, desc, color }: { title: string; value: ReactNode; icon: ComponentType<{ className?: string }>; desc: string; color?: string }) {
+    return (
+        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-slate-400">
+                    {title}
+                </CardTitle>
+                <Icon className={clsx("h-4 w-4", color)} />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-slate-100">{value}</div>
+                <p className="text-xs text-slate-500 mt-1">{desc}</p>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function AdminPage() {
     const stats = trpc.system.stats.useQuery();
@@ -39,22 +57,6 @@ export default function AdminPage() {
     const s = stats.data;
     const h = status.data;
 
-    // Widget helper
-    const Widget = ({ title, value, icon: Icon, desc, color }: any) => (
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">
-                    {title}
-                </CardTitle>
-                <Icon className={clsx("h-4 w-4", color)} />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-slate-100">{value}</div>
-                <p className="text-xs text-slate-500 mt-1">{desc}</p>
-            </CardContent>
-        </Card>
-    );
-
     return (
         <div className="flex flex-col gap-8 pb-10">
             <div className="flex flex-col gap-2">
@@ -64,21 +66,21 @@ export default function AdminPage() {
 
             {/* Quick Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 whitespace-nowrap">
-                <Widget
+                <AdminWidget
                     title="Benutzer"
                     value={s?.users ?? "-"}
                     icon={Users}
                     desc="Registrierte Accounts"
                     color="text-cyan-400"
                 />
-                <Widget
+                <AdminWidget
                     title="Dateien"
                     value={s?.files ?? "-"}
                     icon={FolderOpen}
                     desc="Gespeicherte Dokumente"
                     color="text-indigo-400"
                 />
-                <Widget
+                <AdminWidget
                     title="DB Status"
                     value={h?.db === "healthy" ? "Online" : "Fehler"}
                     icon={HardDrive}

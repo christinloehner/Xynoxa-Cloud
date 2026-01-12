@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc-client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 interface LoginFormProps {
@@ -18,20 +18,19 @@ interface LoginFormProps {
 export function LoginForm({ registrationEnabled }: LoginFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [error, setError] = useState("");
-    const [info, setInfo] = useState("");
+    const initialInfo = searchParams.get("verified") === "1"
+        ? "E-Mail bestätigt. Du kannst dich jetzt einloggen."
+        : "";
+    const initialError = searchParams.get("verify_error")
+        ? decodeURIComponent(searchParams.get("verify_error") as string)
+        : "";
+    const [error, setError] = useState(initialError);
+    const [info, setInfo] = useState(initialInfo);
     const [emailForResend, setEmailForResend] = useState("");
     const resend = trpc.auth.resendVerification.useMutation({
         onSuccess: () => setInfo("Verifizierungslink erneut gesendet."),
         onError: (err) => setError(err.message || "Konnte Verifizierungslink nicht senden.")
     });
-    useEffect(() => {
-        if (searchParams.get("verified") === "1") {
-            setInfo("E-Mail bestätigt. Du kannst dich jetzt einloggen.");
-        }
-        const err = searchParams.get("verify_error");
-        if (err) setError(decodeURIComponent(err));
-    }, [searchParams]);
     const login = trpc.auth.login.useMutation({
         onSuccess: () => {
             setError("");

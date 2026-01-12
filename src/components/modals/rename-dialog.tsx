@@ -14,7 +14,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface RenameDialogProps {
     open: boolean;
@@ -33,14 +33,15 @@ export function RenameDialog({
 }: RenameDialogProps) {
     const [name, setName] = useState(initialName);
 
-    useEffect(() => {
-        if (open) {
+    const handleOpenChange = (nextOpen: boolean) => {
+        if (nextOpen) {
             setName(initialName);
         }
-    }, [open, initialName]);
+        onOpenChange(nextOpen);
+    };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md bg-slate-950 border-slate-800 text-slate-100">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>

@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large", maxBytes: MAX_UPLOAD_BYTES }, { status: 413 });
   }
 
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   if (fileId) {
     // Verify existence/ownership
     const { files } = await import("@/server/db/schema");

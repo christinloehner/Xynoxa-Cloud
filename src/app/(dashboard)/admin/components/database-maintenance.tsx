@@ -2,7 +2,7 @@
  * Copyright (C) 2025 Christin Löhner
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, HardDrive, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
@@ -11,19 +11,17 @@ import { toast } from "sonner";
 type JobType = "orphan" | "reset";
 
 export function DatabaseMaintenance() {
-    const [jobIds, setJobIds] = useState<{ orphan?: string | null; reset?: string | null }>({});
-    const [isStarting, setIsStarting] = useState<{ orphan?: boolean; reset?: boolean }>({});
-
-    // Restore persisted job ids
-    useEffect(() => {
+    const [jobIds, setJobIds] = useState<{ orphan?: string | null; reset?: string | null }>(() => {
+        if (typeof window === "undefined") return {};
         const orphanId =
             localStorage.getItem("xynoxa-maint-orphan") ||
             localStorage.getItem("xynoxa-maint-orphan");
         const resetId =
             localStorage.getItem("xynoxa-maint-reset") ||
             localStorage.getItem("xynoxa-maint-reset");
-        setJobIds({ orphan: orphanId, reset: resetId });
-    }, []);
+        return { orphan: orphanId, reset: resetId };
+    });
+    const [isStarting, setIsStarting] = useState<{ orphan?: boolean; reset?: boolean }>({});
 
     const statusOrphan = trpc.maintenance.status.useQuery(
         { jobId: jobIds.orphan! },

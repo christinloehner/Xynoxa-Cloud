@@ -4,33 +4,32 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc-client";
 
-export default function UserAccountPage() {
-  const me = trpc.auth.me.useQuery();
-  const profile = trpc.profile.get.useQuery();
-  const updateProfile = trpc.profile.update.useMutation({
-    onSuccess: () => profile.refetch()
-  });
-  const changeEmail = trpc.auth.changeEmail.useMutation();
-  const changePassword = trpc.auth.changePassword.useMutation();
-
-  const [email, setEmail] = useState("");
+function AccountForm({
+  initialEmail,
+  initialLocale,
+  updateProfile,
+  changeEmail,
+  changePassword
+}: {
+  initialEmail: string;
+  initialLocale: string;
+  updateProfile: ReturnType<typeof trpc.profile.update.useMutation>;
+  changeEmail: ReturnType<typeof trpc.auth.changeEmail.useMutation>;
+  changePassword: ReturnType<typeof trpc.auth.changePassword.useMutation>;
+}) {
+  const [email, setEmail] = useState(initialEmail);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPassword2, setNewPassword2] = useState("");
-  const [locale, setLocale] = useState("de");
+  const [locale, setLocale] = useState(initialLocale);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (me.data?.user?.email) setEmail(me.data.user.email);
-    if (profile.data?.locale) setLocale(profile.data.locale);
-  }, [me.data, profile.data]);
 
   const handleLocaleSave = () => {
     updateProfile.mutate({ locale }, {
@@ -124,5 +123,30 @@ export default function UserAccountPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function UserAccountPage() {
+  const me = trpc.auth.me.useQuery();
+  const profile = trpc.profile.get.useQuery();
+  const updateProfile = trpc.profile.update.useMutation({
+    onSuccess: () => profile.refetch()
+  });
+  const changeEmail = trpc.auth.changeEmail.useMutation();
+  const changePassword = trpc.auth.changePassword.useMutation();
+
+  const initialEmail = me.data?.user?.email ?? "";
+  const initialLocale = profile.data?.locale ?? "de";
+  const formKey = useMemo(() => `${initialEmail}-${initialLocale}`, [initialEmail, initialLocale]);
+
+  return (
+    <AccountForm
+      key={formKey}
+      initialEmail={initialEmail}
+      initialLocale={initialLocale}
+      updateProfile={updateProfile}
+      changeEmail={changeEmail}
+      changePassword={changePassword}
+    />
   );
 }

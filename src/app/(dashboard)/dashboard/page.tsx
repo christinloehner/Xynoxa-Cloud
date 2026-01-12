@@ -110,12 +110,14 @@ export default function DashboardPage() {
     .sort((a: any, b: any) => new Date(a.dueAt ?? a.createdAt ?? 0).getTime() - new Date(b.dueAt ?? b.createdAt ?? 0).getTime())
     .slice(0, 4), [tasks.data]);
 
+  const fallbackNow = useMemo(() => Date.now(), []);
+
   const activities = useMemo(() => {
     const items: Array<{ at: Date; label: string; link: string; external?: boolean }> = [];
 
     // Add file activities from implicit data (fallback for old data)
     (files.data ?? []).forEach((f: any) => items.push({
-      at: new Date(f.updatedAt ?? f.createdAt ?? Date.now()),
+      at: new Date(f.updatedAt ?? f.createdAt ?? fallbackNow),
       label: `Datei "${f.path}" ${f.updatedAt ? "aktualisiert" : "hochgeladen"}`,
       link: `/files?file=${f.id}`
     }));
@@ -123,14 +125,14 @@ export default function DashboardPage() {
     // Add explicit file notifications (new activity logging)
     (recentNotifications.data?.items ?? []).forEach((n: any) => {
       items.push({
-        at: new Date(n.createdAt ?? Date.now()),
+        at: new Date(n.createdAt ?? fallbackNow),
         label: n.body || n.title,
         link: n.href || "#"
       });
     });
 
     (events.data ?? []).forEach((e: any) => items.push({
-      at: new Date(e.createdAt ?? e.startsAt ?? Date.now()),
+      at: new Date(e.createdAt ?? e.startsAt ?? fallbackNow),
       label: `Termin "${e.title}" erstellt`,
       link: `/calendar?event=${e.id}`
     }));

@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -31,40 +31,14 @@ const toggles: { key: ToggleKey; title: string; description: string }[] = [
   { key: "showOccupation", title: "Beruf", description: "Berufsbezeichnung öffentlich anzeigen." }
 ];
 
-export default function PrivacySettingsPage() {
-  const toast = useToast();
-  const profile = trpc.profile.get.useQuery();
-  const update = trpc.profile.update.useMutation({
-    onSuccess: () => {
-      toast.push({ title: "Gespeichert", description: "Privatsphäre-Einstellungen aktualisiert.", tone: "success" });
-      profile.refetch();
-    },
-    onError: (err) => toast.push({ title: "Fehler beim Speichern", description: err.message, tone: "error" })
-  });
-
-  const [state, setState] = useState<Record<ToggleKey, boolean>>({
-    showEmail: false,
-    showBirthDate: false,
-    showBirthPlace: false,
-    showPhone: false,
-    showAddress: false,
-    showOccupation: false,
-    showCity: false
-  });
-
-  useEffect(() => {
-    if (profile.data) {
-      setState({
-        showEmail: !!profile.data.showEmail,
-        showBirthDate: !!profile.data.showBirthDate,
-        showBirthPlace: !!profile.data.showBirthPlace,
-        showPhone: !!profile.data.showPhone,
-        showAddress: !!profile.data.showAddress,
-        showOccupation: !!profile.data.showOccupation,
-        showCity: !!profile.data.showCity
-      });
-    }
-  }, [profile.data]);
+function PrivacyForm({
+  initialState,
+  update
+}: {
+  initialState: Record<ToggleKey, boolean>;
+  update: ReturnType<typeof trpc.profile.update.useMutation>;
+}) {
+  const [state, setState] = useState<Record<ToggleKey, boolean>>(initialState);
 
   const handleSave = () => {
     update.mutate(state);
@@ -105,5 +79,32 @@ export default function PrivacySettingsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PrivacySettingsPage() {
+  const toast = useToast();
+  const profile = trpc.profile.get.useQuery();
+  const update = trpc.profile.update.useMutation({
+    onSuccess: () => {
+      toast.push({ title: "Gespeichert", description: "Privatsphäre-Einstellungen aktualisiert.", tone: "success" });
+      profile.refetch();
+    },
+    onError: (err) => toast.push({ title: "Fehler beim Speichern", description: err.message, tone: "error" })
+  });
+
+  const initialState = useMemo<Record<ToggleKey, boolean>>(() => ({
+    showEmail: !!profile.data?.showEmail,
+    showBirthDate: !!profile.data?.showBirthDate,
+    showBirthPlace: !!profile.data?.showBirthPlace,
+    showPhone: !!profile.data?.showPhone,
+    showAddress: !!profile.data?.showAddress,
+    showOccupation: !!profile.data?.showOccupation,
+    showCity: !!profile.data?.showCity
+  }), [profile.data]);
+  const formKey = useMemo(() => profile.data?.updatedAt || profile.data?.userId || "privacy-empty", [profile.data]);
+
+  return (
+    <PrivacyForm key={formKey} initialState={initialState} update={update} />
   );
 }

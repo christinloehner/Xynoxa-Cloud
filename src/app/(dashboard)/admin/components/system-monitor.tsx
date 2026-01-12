@@ -4,41 +4,60 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc-client";
 import { HardDrive, Cpu, Activity, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+
+function Sparkline({ data, color, max = 100 }: { data: number[]; color: string; max?: number }) {
+    if (data.length < 2) return <div className="h-24 w-full bg-slate-900/20 rounded animate-pulse" />;
+
+    const width = 100;
+    const height = 100;
+
+    const points = data.map((val, i) => {
+        const x = (i / (30 - 1)) * width;
+        const y = height - Math.min((val / max) * height, height);
+        return `${x},${y}`;
+    }).join(" ");
+
+    return (
+        <div className="h-24 w-full overflow-hidden rounded-md bg-slate-950/30 relative">
+            <div className="absolute inset-x-0 top-1/4 h-px bg-slate-800/30" />
+            <div className="absolute inset-x-0 top-2/4 h-px bg-slate-800/30" />
+            <div className="absolute inset-x-0 top-3/4 h-px bg-slate-800/30" />
+
+            <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full preserve-3d" preserveAspectRatio="none">
+                <path d={`M 0,${height} ${points} V ${height} H 0 Z`} fill={color} fillOpacity="0.2" className="transition-all duration-300" />
+                <path d={`M ${points}`} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />
+            </svg>
+        </div>
+    );
+}
 
 export function SystemMonitor() {
-    // Poll every 2 seconds
-    const { data: stats } = trpc.system.stats.useQuery(undefined, {
-        refetchInterval: 2000
-    });
-
     const [history, setHistory] = useState<{
         cpu: number[];
         memory: number[];
         timestamps: number[];
     }>({ cpu: [], memory: [], timestamps: [] });
 
-    // Update history
-    useEffect(() => {
-        if (!stats) return;
+    const { data: stats } = trpc.system.stats.useQuery(undefined, {
+        refetchInterval: 2000,
+        onSuccess: (data) => {
+            setHistory((prev) => {
+                const now = Date.now();
+                const cpuLoad = (data.cpu.loadAvg[0] / data.cpu.cores) * 100;
+                const memUsage = (data.memory.used / data.memory.total) * 100;
 
-        setHistory(prev => {
-            const now = Date.now();
-            const cpuLoad = (stats.cpu.loadAvg[0] / stats.cpu.cores) * 100; // Rough % saturation
-            const memUsage = ((stats.memory.used) / stats.memory.total) * 100;
+                const newCpu = [...prev.cpu, cpuLoad].slice(-30);
+                const newMem = [...prev.memory, memUsage].slice(-30);
+                const newTime = [...prev.timestamps, now].slice(-30);
 
-            const newCpu = [...prev.cpu, cpuLoad].slice(-30); // Keep last 30 pts (60s)
-            const newMem = [...prev.memory, memUsage].slice(-30);
-            const newTime = [...prev.timestamps, now].slice(-30);
-
-            return { cpu: newCpu, memory: newMem, timestamps: newTime };
-        });
-    }, [stats]);
-
+                return { cpu: newCpu, memory: newMem, timestamps: newTime };
+            });
+        }
+    });
 
     if (!stats) return null;
 
@@ -60,43 +79,6 @@ export function SystemMonitor() {
         const m = Math.floor(seconds % 3600 / 60);
         return `${d}d ${h}h ${m}m`;
     };
-
-    // --- Simple SVG Line Chart ---
-    const Sparkline = ({ data, color, max = 100 }: { data: number[], color: string, max?: number }) => {
-        if (data.length < 2) return <div className="h-24 w-full bg-slate-900/20 rounded animate-pulse" />;
-
-        const width = 100;
-        const height = 100;
-
-        // Normalize points
-        const points = data.map((val, i) => {
-            const x = (i / (30 - 1)) * width;
-            const y = height - Math.min((val / max) * height, height); // Invert Y
-            return `${x},${y}`;
-        }).join(" ");
-
-        const areaPath = `${points} ${width},${height} 0,${height}`;
-
-        return (
-            <div className="h-24 w-full overflow-hidden rounded-md bg-slate-950/30 relative">
-                {/* Grid lines */}
-                <div className="absolute inset-x-0 top-1/4 h-px bg-slate-800/30" />
-                <div className="absolute inset-x-0 top-2/4 h-px bg-slate-800/30" />
-                <div className="absolute inset-x-0 top-3/4 h-px bg-slate-800/30" />
-
-                <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full preserve-3d" preserveAspectRatio="none">
-                    <path
-                        d={`M${data.length > 0 ? (0 / (30 - 1)) * 100 : 0},100 L ${points} L 100,100 Z`} // Close path for area logic approx? 
-                    // Actually let's use the explicit areaPath computed above
-                    />
-                    {/* Area */}
-                    <path d={`M 0,${height} ${points} V ${height} H 0 Z`} fill={color} fillOpacity="0.2" className="transition-all duration-300" />
-                    {/* Line */}
-                    <path d={`M ${points}`} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />
-                </svg>
-            </div>
-        )
-    }
 
     return (
         <div className="grid gap-6 md:grid-cols-2">

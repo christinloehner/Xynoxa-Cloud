@@ -119,7 +119,6 @@ export async function POST(req: NextRequest) {
   const { folders, groupFolders } = await import("@/server/db/schema");
 
   // If fileId is provided, verify ownership and existence
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   let existingFile: any = null;
   if (fileId) {
     const [found] = await db

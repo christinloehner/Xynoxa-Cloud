@@ -218,12 +218,13 @@ export default function ProjectDetailComponent({ projectId }: ProjectDetailProps
     return list;
   }, [sections, tasksBySection]);
 
-  useEffect(() => {
-    if (!project || !projectEditOpen) return;
+  const openProjectEdit = () => {
+    if (!project) return;
     setProjectName(project.name);
     setProjectDescription(project.description ?? "");
     setProjectTags((project.tags ?? []).join(", "));
-  }, [projectEditOpen, project?.name, project?.description, project?.tags, project]);
+    setProjectEditOpen(true);
+  };
 
   const invalidateProject = () => {
     projectQuery.refetch();
@@ -390,7 +391,7 @@ export default function ProjectDetailComponent({ projectId }: ProjectDetailProps
             <Badge className={role === "viewer" ? "bg-slate-200/80 text-slate-700" : "bg-aurora-mint/20 text-slate-900 dark:text-aurora-mint"}>
               {role === "owner" ? "Owner" : role === "manager" ? "Manager" : role === "member" ? "Member" : "Viewer"}
             </Badge>
-            <Button variant="outline" className="border-xynoxa-cyan/60 text-xynoxa-cyan" onClick={() => setProjectEditOpen(true)} disabled={!canManage}>
+            <Button variant="outline" className="border-xynoxa-cyan/60 text-xynoxa-cyan" onClick={openProjectEdit} disabled={!canManage}>
               <Pencil className="mr-2 h-4 w-4" /> Projekt bearbeiten
             </Button>
           </div>
@@ -1126,6 +1127,7 @@ export default function ProjectDetailComponent({ projectId }: ProjectDetailProps
 
       {selectedTaskSettings && (
         <TaskSettingsModal
+          key={selectedTaskSettings.id}
           task={selectedTaskSettings}
           members={members}
           sections={sections}
@@ -1280,26 +1282,6 @@ function TaskSettingsModal({
   const [milestoneId, setMilestoneId] = useState(task.milestoneId ?? "");
   const [tags, setTags] = useState((task.tags ?? []).join(", "));
   const [dueAt, setDueAt] = useState(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 10) : "");
-
-  useEffect(() => {
-    setTitle(task.title);
-    setDescription(task.description ?? "");
-    setPriority(task.priority);
-    setAssigneeId(task.assigneeId ?? "");
-    setSectionId(task.sectionId ?? "");
-    setMilestoneId(task.milestoneId ?? "");
-    setTags((task.tags ?? []).join(", "));
-    setDueAt(task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 10) : "");
-  }, [
-    task.title,
-    task.description,
-    task.priority,
-    task.assigneeId,
-    task.sectionId,
-    task.milestoneId,
-    task.tags,
-    task.dueAt
-  ]);
 
   return (
     <Dialog open onOpenChange={onClose}>

@@ -5,23 +5,21 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function SearchIndexManager({ compact = false }: { compact?: boolean }) {
-    const [jobId, setJobId] = useState<string | null>(null);
-    const [isStarting, setIsStarting] = useState(false);
-
-    // Persist jobId across reloads
-    useEffect(() => {
-        const stored =
+    const [jobId, setJobId] = useState<string | null>(() => {
+        if (typeof window === "undefined") return null;
+        return (
             localStorage.getItem("xynoxa-reindex-job") ||
-            localStorage.getItem("xynoxa-reindex-job");
-        if (stored) setJobId(stored);
-    }, []);
+            localStorage.getItem("xynoxa-reindex-job")
+        );
+    });
+    const [isStarting, setIsStarting] = useState(false);
 
     const reindexMutation = trpc.search.reindex.useMutation({
         onSuccess: (data) => {

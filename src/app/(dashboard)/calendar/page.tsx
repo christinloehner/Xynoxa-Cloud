@@ -5,7 +5,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc-client";
-import { useRef, useState, useMemo, type CSSProperties, useEffect } from "react";
+import { useRef, useState, useMemo, type CSSProperties } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,8 @@ export default function CalendarPage() {
     onSuccess: () => {
       tasksQuery.refetch();
       setEditTaskOpen(false);
+      setAutoTaskId(null);
+      setSelectedTask(null);
     }
   });
   const deleteTask = trpc.calendar.deleteTask.useMutation({
@@ -91,9 +93,17 @@ export default function CalendarPage() {
   const [eventStart, setEventStart] = useState("");
   const [eventEnd, setEventEnd] = useState("");
   const [eventRecurrence, setEventRecurrence] = useState("");
+  const [editEventTitle, setEditEventTitle] = useState<string | null>(null);
+  const [editEventLocation, setEditEventLocation] = useState<string | null>(null);
+  const [editEventDescription, setEditEventDescription] = useState<string | null>(null);
+  const [editEventStart, setEditEventStart] = useState<string | null>(null);
+  const [editEventEnd, setEditEventEnd] = useState<string | null>(null);
+  const [editEventRecurrence, setEditEventRecurrence] = useState<string | null>(null);
   const [hoverEventId, setHoverEventId] = useState<string | null>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState<any | null>(null);
+  const [autoEventId, setAutoEventId] = useState<string | null>(() => searchParams.get("event"));
+  const [autoTaskId, setAutoTaskId] = useState<string | null>(() => searchParams.get("task"));
   const [dragEventId, setDragEventId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -119,19 +129,21 @@ export default function CalendarPage() {
   const openEditTask = (task: any) => {
     setSelectedTask(task);
     setEditTaskOpen(true);
+    setAutoTaskId(null);
   };
 
   const handleUpdateTask = () => {
-    if (!selectedTask) return;
+    const targetTask = selectedTask ?? taskInView;
+    if (!targetTask) return;
     updateTask.mutate({
-      id: selectedTask.id,
-      title: selectedTask.title,
-      description: selectedTask.description || undefined,
-      status: selectedTask.status,
-      dueAt: selectedTask.dueAt
-        ? new Date(selectedTask.dueAt).toISOString().slice(0, 10)
+      id: targetTask.id,
+      title: targetTask.title,
+      description: targetTask.description || undefined,
+      status: targetTask.status,
+      dueAt: targetTask.dueAt
+        ? new Date(targetTask.dueAt).toISOString().slice(0, 10)
         : undefined,
-      assigneeId: selectedTask.assigneeId || undefined
+      assigneeId: targetTask.assigneeId || undefined
     });
   };
 
@@ -149,28 +161,34 @@ export default function CalendarPage() {
     return d;
   }, []);
 
-  // Deep-Link: ?event=<id> oder ?task=<id>
-  useEffect(() => {
-    const eventId = searchParams.get("event");
-    if (eventId && events.length) {
-      const ev = events.find((e) => e.id === eventId);
-      if (ev) {
-        setActiveEvent(ev);
-        setEventDetailOpen(true);
-      }
-    }
-  }, [searchParams, events]);
+  const autoEvent = useMemo(
+    () => (autoEventId ? events.find((e) => e.id === autoEventId) ?? null : null),
+    [events, autoEventId]
+  );
+  const autoTask = useMemo(
+    () => (autoTaskId ? tasks.find((t) => t.id === autoTaskId) ?? null : null),
+    [tasks, autoTaskId]
+  );
+  const eventInView = activeEvent ?? autoEvent;
+  const taskInView = selectedTask ?? autoTask;
+  const eventDialogOpen = eventDetailOpen || (!!autoEvent && !eventDetailOpen);
+  const taskDialogOpen = editTaskOpen || (!!autoTask && !editTaskOpen);
 
-  useEffect(() => {
-    const taskId = searchParams.get("task");
-    if (taskId && tasks.length) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) {
-        setSelectedTask(task);
-        setEditTaskOpen(true);
-      }
+  const updateTaskDraft = (patch: Partial<any>) => {
+    if (!taskInView && !selectedTask) return;
+    setSelectedTask((prev) => ({ ...(prev ?? taskInView), ...patch }));
+  };
+
+  const handleTaskDialogChange = (open: boolean) => {
+    if (!open) {
+      setEditTaskOpen(false);
+      setAutoTaskId(null);
+      setSelectedTask(null);
+      return;
     }
-  }, [searchParams, tasks]);
+    setEditTaskOpen(true);
+    if (!selectedTask && taskInView) setSelectedTask(taskInView);
+  };
   const colorFor = (ev: any) => ev?.calendarColor || "#45E6C5";
 
   const [focusDate, setFocusDate] = useState<Date>(today);
@@ -279,27 +297,53 @@ export default function CalendarPage() {
 
   const openEventDetails = (ev: any) => {
     setActiveEvent(ev);
-    setEventTitle(ev.title ?? "");
-    setEventLocation(ev.location ?? "");
-    setEventDescription(ev.description ?? "");
-    setEventStart(toLocalInputValue(new Date(ev.startsAt)));
-    setEventEnd(toLocalInputValue(new Date(ev.endsAt)));
-    setEventRecurrence(ev.recurrence ?? "");
+    setEditEventTitle(ev.title ?? "");
+    setEditEventLocation(ev.location ?? "");
+    setEditEventDescription(ev.description ?? "");
+    setEditEventStart(toLocalInputValue(new Date(ev.startsAt)));
+    setEditEventEnd(toLocalInputValue(new Date(ev.endsAt)));
+    setEditEventRecurrence(ev.recurrence ?? "");
+    setAutoEventId(null);
+    setEventDetailOpen(true);
+  };
+
+  const handleEventDialogChange = (open: boolean) => {
+    if (!open) {
+      setEventDetailOpen(false);
+      setActiveEvent(null);
+      setAutoEventId(null);
+      setEditEventTitle(null);
+      setEditEventLocation(null);
+      setEditEventDescription(null);
+      setEditEventStart(null);
+      setEditEventEnd(null);
+      setEditEventRecurrence(null);
+      return;
+    }
     setEventDetailOpen(true);
   };
 
   const handleSaveEventDetails = () => {
-    if (!activeEvent) return;
+    const targetEvent = eventInView;
+    if (!targetEvent) return;
     updateEvent.mutate({
-      id: activeEvent.id,
-      title: eventTitle,
-      location: eventLocation || undefined,
-      description: eventDescription || undefined,
-      startsAt: eventStart ? new Date(eventStart).toISOString() : undefined,
-      endsAt: eventEnd ? new Date(eventEnd).toISOString() : undefined,
-      recurrence: eventRecurrence || undefined
+      id: targetEvent.id,
+      title: editEventTitle ?? targetEvent.title ?? "",
+      location: editEventLocation || undefined,
+      description: editEventDescription || undefined,
+      startsAt: (editEventStart ?? toLocalInputValue(new Date(targetEvent.startsAt))) ? new Date(editEventStart ?? toLocalInputValue(new Date(targetEvent.startsAt))).toISOString() : undefined,
+      endsAt: (editEventEnd ?? toLocalInputValue(new Date(targetEvent.endsAt))) ? new Date(editEventEnd ?? toLocalInputValue(new Date(targetEvent.endsAt))).toISOString() : undefined,
+      recurrence: editEventRecurrence || undefined
     });
     setEventDetailOpen(false);
+    setActiveEvent(null);
+    setAutoEventId(null);
+    setEditEventTitle(null);
+    setEditEventLocation(null);
+    setEditEventDescription(null);
+    setEditEventStart(null);
+    setEditEventEnd(null);
+    setEditEventRecurrence(null);
   };
 
   const eventSurface = (color: string) => ({
@@ -1086,7 +1130,7 @@ export default function CalendarPage() {
       </Dialog>
 
       {/* Event Detail / Edit Dialog */}
-      <Dialog open={eventDetailOpen} onOpenChange={setEventDetailOpen}>
+      <Dialog open={eventDialogOpen} onOpenChange={handleEventDialogChange}>
         <DialogContent className="bg-slate-900 border-slate-800 max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-slate-50">Termin bearbeiten</DialogTitle>
@@ -1096,8 +1140,8 @@ export default function CalendarPage() {
               <Label htmlFor="eventTitleEdit" className="text-slate-200">Titel</Label>
               <Input
                 id="eventTitleEdit"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
+                value={editEventTitle ?? eventInView?.title ?? ""}
+                onChange={(e) => setEditEventTitle(e.target.value)}
                 className="bg-slate-800 border-slate-700 text-slate-100"
               />
             </div>
@@ -1107,8 +1151,8 @@ export default function CalendarPage() {
                 <Input
                   id="eventStartEdit"
                   type="datetime-local"
-                  value={eventStart}
-                  onChange={(e) => setEventStart(e.target.value)}
+                  value={editEventStart ?? (eventInView ? toLocalInputValue(new Date(eventInView.startsAt)) : "")}
+                  onChange={(e) => setEditEventStart(e.target.value)}
                   className="bg-slate-800 border-slate-700 text-slate-100"
                 />
               </div>
@@ -1117,8 +1161,8 @@ export default function CalendarPage() {
                 <Input
                   id="eventEndEdit"
                   type="datetime-local"
-                  value={eventEnd}
-                  onChange={(e) => setEventEnd(e.target.value)}
+                  value={editEventEnd ?? (eventInView ? toLocalInputValue(new Date(eventInView.endsAt)) : "")}
+                  onChange={(e) => setEditEventEnd(e.target.value)}
                   className="bg-slate-800 border-slate-700 text-slate-100"
                 />
               </div>
@@ -1127,8 +1171,8 @@ export default function CalendarPage() {
               <Label htmlFor="eventLocationEdit" className="text-slate-200">Ort</Label>
               <Input
                 id="eventLocationEdit"
-                value={eventLocation}
-                onChange={(e) => setEventLocation(e.target.value)}
+                value={editEventLocation ?? eventInView?.location ?? ""}
+                onChange={(e) => setEditEventLocation(e.target.value)}
                 className="bg-slate-800 border-slate-700 text-slate-100"
               />
             </div>
@@ -1136,8 +1180,8 @@ export default function CalendarPage() {
               <Label htmlFor="eventDescriptionEdit" className="text-slate-200">Beschreibung</Label>
               <textarea
                 id="eventDescriptionEdit"
-                value={eventDescription}
-                onChange={(e) => setEventDescription(e.target.value)}
+                value={editEventDescription ?? eventInView?.description ?? ""}
+                onChange={(e) => setEditEventDescription(e.target.value)}
                 className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 p-2 text-sm"
                 rows={4}
               />
@@ -1146,21 +1190,21 @@ export default function CalendarPage() {
               <Label htmlFor="eventRecurrenceEdit" className="text-slate-200">Recurrence (RRULE optional)</Label>
               <Input
                 id="eventRecurrenceEdit"
-                value={eventRecurrence}
-                onChange={(e) => setEventRecurrence(e.target.value)}
+                value={editEventRecurrence ?? eventInView?.recurrence ?? ""}
+                onChange={(e) => setEditEventRecurrence(e.target.value)}
                 className="bg-slate-800 border-slate-700 text-slate-100"
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEventDetailOpen(false)}>
+              <Button variant="outline" onClick={() => handleEventDialogChange(false)}>
                 Schließen
               </Button>
-              {activeEvent && (
+              {eventInView && (
                 <Button
                   variant="destructive"
                   onClick={() => {
-                    deleteEvent.mutate({ id: activeEvent.id });
-                    setEventDetailOpen(false);
+                    deleteEvent.mutate({ id: eventInView.id });
+                    handleEventDialogChange(false);
                   }}
                   disabled={deleteEvent.isPending}
                 >
@@ -1169,7 +1213,7 @@ export default function CalendarPage() {
               )}
               <Button
                 onClick={handleSaveEventDetails}
-                disabled={!eventTitle || !eventStart || !eventEnd || updateEvent.isPending}
+                disabled={!((editEventTitle ?? eventInView?.title) && (editEventStart ?? (eventInView ? toLocalInputValue(new Date(eventInView.startsAt)) : "")) && (editEventEnd ?? (eventInView ? toLocalInputValue(new Date(eventInView.endsAt)) : ""))) || updateEvent.isPending}
               >
                 {updateEvent.isPending ? "Speichere..." : "Speichern"}
               </Button>
@@ -1253,19 +1297,19 @@ export default function CalendarPage() {
       </Dialog>
 
       {/* Edit Task Dialog */}
-      <Dialog open={editTaskOpen} onOpenChange={setEditTaskOpen}>
+      <Dialog open={taskDialogOpen} onOpenChange={handleTaskDialogChange}>
         <DialogContent className="bg-slate-900 border-slate-800">
           <DialogHeader>
             <DialogTitle className="text-slate-50">Task bearbeiten</DialogTitle>
           </DialogHeader>
-          {selectedTask && (
+          {taskInView && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="editTaskTitle" className="text-slate-200">Titel</Label>
                 <Input
                   id="editTaskTitle"
-                  value={selectedTask.title}
-                  onChange={(e) => setSelectedTask({ ...selectedTask, title: e.target.value })}
+                  value={taskInView.title}
+                  onChange={(e) => updateTaskDraft({ title: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-slate-100"
                 />
               </div>
@@ -1273,17 +1317,17 @@ export default function CalendarPage() {
                 <Label htmlFor="editTaskDescription" className="text-slate-200">Beschreibung</Label>
                 <Input
                   id="editTaskDescription"
-                  value={selectedTask.description || ""}
-                  onChange={(e) => setSelectedTask({ ...selectedTask, description: e.target.value })}
+                  value={taskInView.description || ""}
+                  onChange={(e) => updateTaskDraft({ description: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-slate-100"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editTaskAssignee" className="text-slate-200">Zugewiesen an</Label>
                 <Select
-                  value={selectedTask.assigneeId || "none"}
+                  value={taskInView.assigneeId || "none"}
                   onValueChange={(val) =>
-                    setSelectedTask({ ...selectedTask, assigneeId: val === "none" ? null : val })
+                    updateTaskDraft({ assigneeId: val === "none" ? null : val })
                   }
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
@@ -1301,17 +1345,17 @@ export default function CalendarPage() {
                   id="editTaskDue"
                   type="date"
                   value={
-                    selectedTask.dueAt ? new Date(selectedTask.dueAt).toISOString().slice(0, 10) : ""
+                    taskInView.dueAt ? new Date(taskInView.dueAt).toISOString().slice(0, 10) : ""
                   }
-                  onChange={(e) => setSelectedTask({ ...selectedTask, dueAt: e.target.value })}
+                  onChange={(e) => updateTaskDraft({ dueAt: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-slate-100"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editTaskStatus" className="text-slate-200">Status</Label>
                 <Select
-                  value={selectedTask.status}
-                  onValueChange={(val) => setSelectedTask({ ...selectedTask, status: val })}
+                  value={taskInView.status}
+                  onValueChange={(val) => updateTaskDraft({ status: val })}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
                     <SelectValue />
@@ -1323,7 +1367,7 @@ export default function CalendarPage() {
                 </Select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditTaskOpen(false)}>
+                <Button variant="outline" onClick={() => handleTaskDialogChange(false)}>
                   Abbrechen
                 </Button>
                 <Button onClick={handleUpdateTask} disabled={updateTask.isPending}>

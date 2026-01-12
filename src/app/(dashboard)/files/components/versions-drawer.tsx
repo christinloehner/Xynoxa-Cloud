@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,26 +28,26 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
   const [fromId, setFromId] = useState<string | null>(null);
   const [toId, setToId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!versionsQuery.data || versionsQuery.data.length === 0) return;
-    const [latest, second] = versionsQuery.data;
-    setToId(latest.id);
-    setFromId(second?.id ?? latest.id);
-  }, [versionsQuery.data]);
-
   const diffQuery = trpc.files.diff.useQuery(
-    { fileId: file?.id || "", fromVersionId: fromId || "", toVersionId: toId || "" },
-    { enabled: !!file && !!fromId && !!toId && open }
+    { fileId: file?.id || "", fromVersionId: activeFromId || "", toVersionId: activeToId || "" },
+    { enabled: !!file && !!activeFromId && !!activeToId && open }
   );
 
   const restore = trpc.files.restoreVersion.useMutation({ onSuccess: () => versionsQuery.refetch() });
 
   const versions = useMemo(() => versionsQuery.data ?? [], [versionsQuery.data]);
+  const defaultIds = useMemo(() => {
+    if (!versions.length) return { to: null as string | null, from: null as string | null };
+    const [latest, second] = versions;
+    return { to: latest.id, from: second?.id ?? latest.id };
+  }, [versions]);
+  const activeToId = versions.some((v) => v.id === toId) ? toId : defaultIds.to;
+  const activeFromId = versions.some((v) => v.id === fromId) ? fromId : defaultIds.from;
   const loading = versionsQuery.isLoading || diffQuery.isLoading;
 
-  const selectedTo = useMemo(() => versions.find((v) => v.id === toId), [versions, toId]);
+  const selectedTo = useMemo(() => versions.find((v) => v.id === activeToId), [versions, activeToId]);
 
-  const canRestore = !!toId && !file?.vault && !restore.isPending;
+  const canRestore = !!activeToId && !file?.vault && !restore.isPending;
 
   const originalContent = diffQuery.data?.fromContent ?? "";
   const modifiedContent = diffQuery.data?.toContent ?? "";
@@ -69,7 +69,7 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
                   key={v.id}
                   className={cn(
                     "p-3 rounded-md border transition cursor-pointer",
-                    v.id === toId ? "border-cyan-500/60 bg-cyan-500/10" : "border-slate-800 hover:border-slate-700"
+                    v.id === activeToId ? "border-cyan-500/60 bg-cyan-500/10" : "border-slate-800 hover:border-slate-700"
                   )}
                   onClick={() => setToId(v.id)}
                 >
@@ -87,14 +87,14 @@ export function VersionsDrawer({ file, open, onClose }: VersionsDrawerProps) {
             <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800/60">
               <div className="text-sm text-slate-200">Diff: {selectedTo ? `v${selectedTo.version}` : "-"}</div>
               <div className="ml-auto flex gap-2 items-center">
-                <Button variant="outline" size="sm" disabled={!toId || !fromId || loading} onClick={() => setFromId(toId)}>
+                <Button variant="outline" size="sm" disabled={!activeToId || !activeFromId || loading} onClick={() => activeToId && setFromId(activeToId)}>
                   Basis = Ziel
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
                   disabled={!canRestore}
-                  onClick={() => toId && restore.mutate({ versionId: toId })}
+                  onClick={() => activeToId && restore.mutate({ versionId: activeToId })}
                 >
                   {restore.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1" />} Wiederherstellen
                 </Button>

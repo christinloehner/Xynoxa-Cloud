@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,75 +12,72 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast";
 
-export default function ProfileClient() {
-  const me = trpc.auth.me.useQuery();
-  const profile = trpc.profile.get.useQuery();
-  const update = trpc.profile.update.useMutation({
-    onSuccess: () => {
-      toast.push({ title: "Gespeichert", description: "Profil wurde aktualisiert.", tone: "success" });
-      profile.refetch();
-    },
-    onError: (err) => toast.push({ title: "Fehler beim Speichern", description: err.message, tone: "error" })
-  });
-  const toast = useToast();
+type ProfileInitial = {
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  avatarStoragePath: string | null;
+  avatarMime: string | null;
+  firstName: string;
+  lastName: string;
+  pronouns: string;
+  phone: string;
+  street: string;
+  houseNumber: string;
+  postalCode: string;
+  city: string;
+  birthDate: string;
+  birthPlace: string;
+  occupation: string;
+  websites: string[];
+  xUrl: string;
+  fediverseUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  twitchUrl: string;
+  bio: string;
+  publicProfile: boolean;
+  profileUrl: string;
+};
 
-  const [displayName, setDisplayName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [pronouns, setPronouns] = useState("");
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [houseNumber, setHouseNumber] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [birthDate, setBirthDate] = useState<string>("");
-  const [birthPlace, setBirthPlace] = useState("");
-  const [occupation, setOccupation] = useState("");
-  const [bio, setBio] = useState("");
-  const [websites, setWebsites] = useState<string[]>([]);
+function ProfileForm({
+  initial,
+  meEmail,
+  meUserId,
+  update
+}: {
+  initial: ProfileInitial;
+  meEmail: string;
+  meUserId: string;
+  update: ReturnType<typeof trpc.profile.update.useMutation>;
+}) {
+  const [displayName, setDisplayName] = useState(initial.displayName);
+  const [firstName, setFirstName] = useState(initial.firstName);
+  const [lastName, setLastName] = useState(initial.lastName);
+  const [pronouns, setPronouns] = useState(initial.pronouns);
+  const [phone, setPhone] = useState(initial.phone);
+  const [street, setStreet] = useState(initial.street);
+  const [houseNumber, setHouseNumber] = useState(initial.houseNumber);
+  const [postalCode, setPostalCode] = useState(initial.postalCode);
+  const [city, setCity] = useState(initial.city);
+  const [birthDate, setBirthDate] = useState<string>(initial.birthDate);
+  const [birthPlace, setBirthPlace] = useState(initial.birthPlace);
+  const [occupation, setOccupation] = useState(initial.occupation);
+  const [bio, setBio] = useState(initial.bio);
+  const [websites, setWebsites] = useState<string[]>(initial.websites);
   const [websiteInput, setWebsiteInput] = useState("");
-  const [xUrl, setXUrl] = useState("");
-  const [fediverseUrl, setFediverseUrl] = useState("");
-  const [instagramUrl, setInstagramUrl] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [twitchUrl, setTwitchUrl] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [avatarStoragePath, setAvatarStoragePath] = useState<string | null>(null);
-  const [avatarMime, setAvatarMime] = useState<string | null>(null);
-  const [publicProfile, setPublicProfile] = useState(false);
-  const [profileUrl, setProfileUrl] = useState("");
+  const [xUrl, setXUrl] = useState(initial.xUrl);
+  const [fediverseUrl, setFediverseUrl] = useState(initial.fediverseUrl);
+  const [instagramUrl, setInstagramUrl] = useState(initial.instagramUrl);
+  const [youtubeUrl, setYoutubeUrl] = useState(initial.youtubeUrl);
+  const [twitchUrl, setTwitchUrl] = useState(initial.twitchUrl);
+  const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
+  const [avatarStoragePath, setAvatarStoragePath] = useState<string | null>(initial.avatarStoragePath);
+  const [avatarMime, setAvatarMime] = useState<string | null>(initial.avatarMime);
+  const [publicProfile, setPublicProfile] = useState(initial.publicProfile);
+  const [profileUrl, setProfileUrl] = useState(initial.profileUrl);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (profile.data) {
-      setDisplayName(profile.data.displayName ?? "");
-      setAvatarUrl(profile.data.avatarUrl ?? "");
-      setAvatarStoragePath(profile.data.avatarStoragePath ?? null);
-      setAvatarMime(profile.data.avatarMime ?? null);
-      setFirstName(profile.data.firstName ?? "");
-      setLastName(profile.data.lastName ?? "");
-      setPronouns(profile.data.pronouns ?? "");
-      setPhone(profile.data.phone ?? "");
-      setStreet(profile.data.street ?? "");
-      setHouseNumber(profile.data.houseNumber ?? "");
-      setPostalCode(profile.data.postalCode ?? "");
-      setCity(profile.data.city ?? "");
-      const birth = profile.data.birthDate ? new Date(profile.data.birthDate as any) : null;
-      setBirthDate(birth ? birth.toISOString().slice(0, 10) : "");
-      setBirthPlace(profile.data.birthPlace ?? "");
-      setOccupation(profile.data.occupation ?? "");
-      setWebsites(profile.data.websites ?? []);
-      setXUrl(profile.data.xUrl ?? "");
-      setFediverseUrl(profile.data.fediverseUrl ?? "");
-      setInstagramUrl(profile.data.instagramUrl ?? "");
-      setYoutubeUrl(profile.data.youtubeUrl ?? "");
-      setTwitchUrl(profile.data.twitchUrl ?? "");
-      setBio(profile.data.bio ?? "");
-      setPublicProfile(profile.data.publicProfile ?? false);
-      setProfileUrl(profile.data.profileUrl ?? "");
-    }
-  }, [profile.data]);
 
   const handleSave = async () => {
     update.mutate({
@@ -112,7 +109,7 @@ export default function ProfileClient() {
   };
 
   const setGravatar = () => {
-    const email = me.data?.user?.email?.trim().toLowerCase() || "";
+    const email = meEmail.trim().toLowerCase();
     const fallback = "identicon";
     if (!email) {
       setAvatarUrl("/images/avatar-default.svg");
@@ -157,9 +154,9 @@ export default function ProfileClient() {
     setWebsites((prev) => prev.filter((w) => w !== link));
   };
 
-  const avatarOwnerId = profile.data?.userId || me.data?.user?.id;
+  const avatarOwnerId = initial.userId || meUserId;
   const avatarPreview = avatarUrl || (avatarStoragePath && avatarOwnerId ? `/api/avatar/${avatarOwnerId}` : "/images/avatar-default.svg");
-  const publicSlug = profileUrl || me.data?.user?.id || "user";
+  const publicSlug = profileUrl || meUserId || "user";
   const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN ? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN}` : "";
   const publicHref = `${appDomain}/u/${publicSlug}`;
 
@@ -363,5 +360,57 @@ export default function ProfileClient() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfileClient() {
+  const me = trpc.auth.me.useQuery();
+  const profile = trpc.profile.get.useQuery();
+  const toast = useToast();
+  const update = trpc.profile.update.useMutation({
+    onSuccess: () => {
+      toast.push({ title: "Gespeichert", description: "Profil wurde aktualisiert.", tone: "success" });
+      profile.refetch();
+    },
+    onError: (err) => toast.push({ title: "Fehler beim Speichern", description: err.message, tone: "error" })
+  });
+
+  const initial = useMemo<ProfileInitial>(() => ({
+    userId: profile.data?.userId ?? "",
+    displayName: profile.data?.displayName ?? "",
+    avatarUrl: profile.data?.avatarUrl ?? "",
+    avatarStoragePath: profile.data?.avatarStoragePath ?? null,
+    avatarMime: profile.data?.avatarMime ?? null,
+    firstName: profile.data?.firstName ?? "",
+    lastName: profile.data?.lastName ?? "",
+    pronouns: profile.data?.pronouns ?? "",
+    phone: profile.data?.phone ?? "",
+    street: profile.data?.street ?? "",
+    houseNumber: profile.data?.houseNumber ?? "",
+    postalCode: profile.data?.postalCode ?? "",
+    city: profile.data?.city ?? "",
+    birthDate: profile.data?.birthDate ? new Date(profile.data.birthDate as any).toISOString().slice(0, 10) : "",
+    birthPlace: profile.data?.birthPlace ?? "",
+    occupation: profile.data?.occupation ?? "",
+    websites: profile.data?.websites ?? [],
+    xUrl: profile.data?.xUrl ?? "",
+    fediverseUrl: profile.data?.fediverseUrl ?? "",
+    instagramUrl: profile.data?.instagramUrl ?? "",
+    youtubeUrl: profile.data?.youtubeUrl ?? "",
+    twitchUrl: profile.data?.twitchUrl ?? "",
+    bio: profile.data?.bio ?? "",
+    publicProfile: profile.data?.publicProfile ?? false,
+    profileUrl: profile.data?.profileUrl ?? ""
+  }), [profile.data]);
+  const formKey = useMemo(() => profile.data?.updatedAt || profile.data?.userId || "profile-empty", [profile.data]);
+
+  return (
+    <ProfileForm
+      key={formKey}
+      initial={initial}
+      meEmail={me.data?.user?.email ?? ""}
+      meUserId={me.data?.user?.id ?? ""}
+      update={update}
+    />
   );
 }

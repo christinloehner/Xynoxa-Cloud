@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileItem } from "@/app/(dashboard)/files/use-files-query";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Highlight, themes } from "prism-react-renderer";
@@ -48,38 +48,18 @@ function detectLanguage(file: FileItem) {
 }
 
 export function TextViewer({ file }: Props) {
-    const [content, setContent] = useState<string>("");
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let active = true;
-        setLoading(true);
-        fetch(`/api/files/content/${file.id}`)
-            .then(async (res) => {
-                if (!res.ok) throw new Error(`Status ${res.status}`);
-                return res.text();
-            })
-            .then((txt) => {
-                if (active) {
-                    setContent(txt);
-                    setError(null);
-                }
-            })
-            .catch((err) => {
-                if (active) setError(err.message);
-            })
-            .finally(() => {
-                if (active) setLoading(false);
-            });
-        return () => {
-            active = false;
-        };
-    }, [file.id]);
+    const contentQuery = useQuery({
+        queryKey: ["file-content", file.id],
+        queryFn: async () => {
+            const res = await fetch(`/api/files/content/${file.id}`);
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            return res.text();
+        }
+    });
 
     const lang = detectLanguage(file);
 
-    if (loading) {
+    if (contentQuery.isLoading) {
         return (
             <div className="flex h-full items-center justify-center text-slate-400 gap-2">
                 <Loader2 className="animate-spin" size={18} /> Lädt Vorschau...
@@ -87,18 +67,18 @@ export function TextViewer({ file }: Props) {
         );
     }
 
-    if (error) {
+    if (contentQuery.error) {
         return (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-amber-300">
                 <AlertCircle size={32} />
-                <p className="text-sm">Vorschau fehlgeschlagen ({error})</p>
+                <p className="text-sm">Vorschau fehlgeschlagen ({(contentQuery.error as Error).message})</p>
             </div>
         );
     }
 
     return (
         <div className="h-full overflow-auto bg-slate-950">
-            <Highlight code={content} language={lang as any} theme={themes.vsDark}>
+            <Highlight code={contentQuery.data ?? ""} language={lang as any} theme={themes.vsDark}>
                 {({ className, style, tokens, getLineProps, getTokenProps }) => (
                     <pre className={`${className} text-sm`} style={{ ...style, padding: "16px", margin: 0 }}>
                         {tokens.map((line, i) => (

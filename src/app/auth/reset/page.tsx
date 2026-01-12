@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useSearchParams } from "next/navigation";
 
@@ -20,14 +20,6 @@ function ResetPageContent() {
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"request" | "confirm">(urlToken ? "confirm" : "request");
   const [info, setInfo] = useState<string | null>(null);
-
-  // Update state if URL changes (though mostly initial load matters)
-  useEffect(() => {
-    if (urlToken) {
-      setToken(urlToken);
-      setStep("confirm");
-    }
-  }, [urlToken]);
 
   const requestReset = trpc.auth.requestReset.useMutation({
     onSuccess: (data) => {

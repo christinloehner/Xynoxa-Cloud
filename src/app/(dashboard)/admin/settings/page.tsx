@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -15,42 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function AdminSettingsPage() {
-    const { data: settings, isLoading, refetch } = trpc.admin.getSettings.useQuery();
-    const updateSetting = trpc.admin.updateSetting.useMutation({
-        onSuccess: () => {
-            toast.success("Einstellung gespeichert.");
-            refetch();
-        },
-        onError: (e) => {
-            toast.error(`Fehler beim Speichern: ${e.message}`);
-        }
-    });
-
-    const [clientId, setClientId] = useState("");
-    const [clientSecret, setClientSecret] = useState("");
-    const [redirectUri, setRedirectUri] = useState("");
-    const recommendedRedirect = settings?.["app_url"]
-        ? `${settings["app_url"]}/api/google/oauth/callback`
-        : "";
-
-    useEffect(() => {
-        if (settings) {
-            setClientId(settings["google_client_id"] ?? "");
-            setClientSecret(settings["google_client_secret"] ?? "");
-            setRedirectUri(settings["google_oauth_redirect"] ?? recommendedRedirect);
-        }
-    }, [settings, recommendedRedirect]);
-
-    const registrationDisabled = settings?.["registration_disabled"] === true;
-
-    const handleToggleRegistration = (checked: boolean) => {
-        updateSetting.mutate({
-            key: "registration_disabled",
-            value: checked,
-            description: "Wenn wahr, ist die Registrierung für neue Nutzer deaktiviert."
-        });
-    };
+function GoogleOAuthForm({
+    defaults,
+    recommendedRedirect,
+    updateSetting
+}: {
+    defaults: { clientId: string; clientSecret: string; redirectUri: string };
+    recommendedRedirect: string;
+    updateSetting: ReturnType<typeof trpc.admin.updateSetting.useMutation>;
+}) {
+    const [clientId, setClientId] = useState(defaults.clientId);
+    const [clientSecret, setClientSecret] = useState(defaults.clientSecret);
+    const [redirectUri, setRedirectUri] = useState(defaults.redirectUri);
 
     const saveGoogle = () => {
         updateSetting.mutate({
@@ -69,6 +45,90 @@ export default function AdminSettingsPage() {
             description: "Google OAuth Redirect URI"
         });
     };
+
+    return (
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
+            <CardHeader>
+                <CardTitle className="text-lg">Kalender-Integration (Google)</CardTitle>
+                <CardDescription>Client-Credentials für Google Calendar OAuth. Werden verschlüsselt in der DB gespeichert.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label>Client ID</Label>
+                    <Input
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                        placeholder="xxxxxxxxxxxx.apps.googleusercontent.com"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Client Secret</Label>
+                    <Input
+                        type="password"
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                        placeholder="••••••••"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Redirect URI (fest vorgegeben)</Label>
+                    <div className="flex flex-col gap-2 rounded-lg border border-slate-800/70 bg-slate-900/40 p-3">
+                        <div className="flex items-center justify-between text-xs text-slate-400">
+                            <span>Diese URI muss in der Google OAuth Client-ID hinterlegt werden.</span>
+                            {recommendedRedirect && (
+                                <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(recommendedRedirect)}>
+                                    Kopieren
+                                </Button>
+                            )}
+                        </div>
+                        <code className="text-[11px] break-all text-slate-200">
+                            {recommendedRedirect || ""}
+                        </code>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                        Der Backend-Endpunkt existiert unter /api/google/oauth/callback. Diese URI ist unveränderlich.
+                    </p>
+                </div>
+                <Button onClick={saveGoogle} disabled={updateSetting.isPending}>
+                    {updateSetting.isPending ? "Speichere..." : "Speichern"}
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function AdminSettingsPage() {
+    const { data: settings, isLoading, refetch } = trpc.admin.getSettings.useQuery();
+    const updateSetting = trpc.admin.updateSetting.useMutation({
+        onSuccess: () => {
+            toast.success("Einstellung gespeichert.");
+            refetch();
+        },
+        onError: (e) => {
+            toast.error(`Fehler beim Speichern: ${e.message}`);
+        }
+    });
+
+    const recommendedRedirect = settings?.["app_url"]
+        ? `${settings["app_url"]}/api/google/oauth/callback`
+        : "";
+    const googleDefaults = useMemo(() => ({
+        clientId: settings?.["google_client_id"] ?? "",
+        clientSecret: settings?.["google_client_secret"] ?? "",
+        redirectUri: settings?.["google_oauth_redirect"] ?? recommendedRedirect
+    }), [settings, recommendedRedirect]);
+    const googleKey = `${googleDefaults.clientId}|${googleDefaults.clientSecret}|${googleDefaults.redirectUri}`;
+
+    const registrationDisabled = settings?.["registration_disabled"] === true;
+
+    const handleToggleRegistration = (checked: boolean) => {
+        updateSetting.mutate({
+            key: "registration_disabled",
+            value: checked,
+            description: "Wenn wahr, ist die Registrierung für neue Nutzer deaktiviert."
+        });
+    };
+
 
     return (
         <div className="space-y-6">
@@ -158,53 +218,12 @@ export default function AdminSettingsPage() {
                 </CardContent>
             </Card>
 
-            <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
-                <CardHeader>
-                    <CardTitle className="text-lg">Kalender-Integration (Google)</CardTitle>
-                    <CardDescription>Client-Credentials für Google Calendar OAuth. Werden verschlüsselt in der DB gespeichert.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label>Client ID</Label>
-                        <Input
-                            value={clientId}
-                            onChange={(e) => setClientId(e.target.value)}
-                            placeholder="xxxxxxxxxxxx.apps.googleusercontent.com"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Client Secret</Label>
-                        <Input
-                            type="password"
-                            value={clientSecret}
-                            onChange={(e) => setClientSecret(e.target.value)}
-                            placeholder="••••••••"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Redirect URI (fest vorgegeben)</Label>
-                        <div className="flex flex-col gap-2 rounded-lg border border-slate-800/70 bg-slate-900/40 p-3">
-                            <div className="flex items-center justify-between text-xs text-slate-400">
-                                <span>Diese URI muss in der Google OAuth Client-ID hinterlegt werden.</span>
-                                {recommendedRedirect && (
-                                    <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(recommendedRedirect)}>
-                                        Kopieren
-                                    </Button>
-                                )}
-                            </div>
-                            <code className="text-[11px] break-all text-slate-200">
-                                {recommendedRedirect || ""}
-                            </code>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                            Der Backend-Endpunkt existiert unter /api/google/oauth/callback. Diese URI ist unveränderlich.
-                        </p>
-                    </div>
-                    <Button onClick={saveGoogle} disabled={updateSetting.isPending}>
-                        {updateSetting.isPending ? "Speichere..." : "Speichern"}
-                    </Button>
-                </CardContent>
-            </Card>
+            <GoogleOAuthForm
+                key={googleKey}
+                defaults={googleDefaults}
+                recommendedRedirect={recommendedRedirect}
+                updateSetting={updateSetting}
+            />
         </div>
     );
 }

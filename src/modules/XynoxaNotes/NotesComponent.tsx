@@ -4,7 +4,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -70,10 +71,10 @@ export default function NotesComponent() {
   const [autosaveState, setAutosaveState] = useState<"idle" | "speichert" | "gespeichert">("idle");
   const [vault, setVault] = useState(false);
   const { envelopeKey, hasKey, loading: vaultLoading, state: vaultState } = useVaultKey();
-  const [viewNotes, setViewNotes] = useState<any[]>([]);
   const [shareNote, setShareNote] = useState<any | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [autoNoteId, setAutoNoteId] = useState<string | null>(() => searchParams.get("open"));
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -148,33 +149,27 @@ export default function NotesComponent() {
     [envelopeKey]
   );
 
-  useEffect(() => {
-    const run = async () => {
-      if (!list.data) {
-        setViewNotes([]);
-        return;
-      }
-      const decrypted = await Promise.all((list.data as any[]).map((n: any) => decryptNote(n)));
-      setViewNotes(decrypted);
-    };
-    run();
-  }, [list.data, decryptNote]);
+  const notesKey = useMemo(
+    () => (list.data as any[] | undefined)?.map((n) => n.id).join("|") ?? "empty",
+    [list.data]
+  );
+  const decryptedNotesQuery = useQuery({
+    queryKey: ["notes-decrypted", notesKey, envelopeKey],
+    enabled: !!list.data,
+    queryFn: async () => {
+      if (!list.data) return [];
+      return Promise.all((list.data as any[]).map((n: any) => decryptNote(n)));
+    }
+  });
+  const viewNotes = decryptedNotesQuery.data ?? [];
 
   // Öffne Note direkt über Query-Param ?open=<id>
-  useEffect(() => {
-    const openId = searchParams.get("open");
-    if (!openId || viewNotes.length === 0) return;
-    const found = viewNotes.find((n) => n.id === openId);
-    if (found) {
-      setSelectedNote(found);
-      setDetailOpen(true);
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("open");
-      const qs = params.toString();
-      const targetUrl = `/notes${qs ? `?${qs}` : ""}`;
-      router.replace(targetUrl as any);
-    }
-  }, [searchParams, viewNotes, router]);
+  const autoNote = useMemo(
+    () => (autoNoteId ? viewNotes.find((n) => n.id === autoNoteId) ?? null : null),
+    [autoNoteId, viewNotes]
+  );
+  const noteInView = selectedNote ?? autoNote;
+  const detailDialogOpen = detailOpen || (!!autoNote && !detailOpen);
 
   const handleCreate = () => {
     if (!title.trim()) return;
@@ -208,10 +203,26 @@ export default function NotesComponent() {
     setSelectedNote(note);
     setEditOpen(true);
     setAutosaveState("idle");
+    setAutoNoteId(null);
   };
 
   const openDetail = (note: any) => {
     setSelectedNote(note);
+    setDetailOpen(true);
+    setAutoNoteId(null);
+  };
+
+  const handleDetailDialogChange = (open: boolean) => {
+    if (!open) {
+      setDetailOpen(false);
+      setAutoNoteId(null);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("open");
+      const qs = params.toString();
+      const targetUrl = `/notes${qs ? `?${qs}` : ""}`;
+      router.replace(targetUrl as any);
+      return;
+    }
     setDetailOpen(true);
   };
 
@@ -549,44 +560,44 @@ export default function NotesComponent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog open={detailDialogOpen} onOpenChange={handleDetailDialogChange}>
         <DialogContent className="bg-slate-900 border-slate-800 max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-slate-50">Note Details</DialogTitle>
           </DialogHeader>
-          {selectedNote && (
+          {noteInView && (
             <div className="space-y-4 max-h-[80vh] overflow-hidden flex flex-col">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Title</p>
-                  <h2 className="text-2xl font-semibold text-slate-50">{selectedNote.title}</h2>
+                  <h2 className="text-2xl font-semibold text-slate-50">{noteInView.title}</h2>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => { setDetailOpen(false); openEdit(selectedNote); }}>Bearbeiten</Button>
-                  <Button size="sm" variant="outline" onClick={() => handleDelete(selectedNote.id)}>Löschen</Button>
-                  <Button size="sm" variant="outline" onClick={() => handleExport(selectedNote.id, selectedNote.title)}>Export</Button>
+                  <Button size="sm" onClick={() => { handleDetailDialogChange(false); openEdit(noteInView); }}>Bearbeiten</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleDelete(noteInView.id)}>Löschen</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleExport(noteInView.id, noteInView.title)}>Export</Button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {selectedNote.tags?.map((t: any) => (
+                {noteInView.tags?.map((t: any) => (
                   <Badge key={t.id} tone="cyan" className="text-xs">{t.name}</Badge>
                 ))}
-                {selectedNote.isVault && (
+                {noteInView.isVault && (
                   <Badge tone="amber" className="text-xs flex items-center gap-1"><Shield size={12}/> Vault</Badge>
                 )}
               </div>
-              {selectedNote.locked ? (
+              {noteInView.locked ? (
                 <div className="text-sm text-amber-200 flex items-center gap-2">
                   <Shield size={14}/> Vault-Note gesperrt – Passphrase eingeben.
                 </div>
               ) : (
                 <div
                   className="prose prose-invert max-w-none bg-slate-950/60 border border-slate-800 rounded-lg p-4 flex-1 overflow-auto max-h-[50vh]"
-                  dangerouslySetInnerHTML={{ __html: selectedNote.content || "" }}
+                  dangerouslySetInnerHTML={{ __html: noteInView.content || "" }}
                 />
               )}
               <div className="text-xs text-slate-400">
-                Aktualisiert: {new Date(selectedNote.updatedAt).toLocaleString("de-DE")}
+                Aktualisiert: {new Date(noteInView.updatedAt).toLocaleString("de-DE")}
               </div>
             </div>
           )}
