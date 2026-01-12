@@ -47,7 +47,7 @@ const notesModule: XynoxaModule = {
   },
 
   onLoad: async () => {
-    console.log("[NotesModule] Modul wird geladen...");
+    console.warn("[NotesModule] Modul wird geladen...");
 
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
@@ -66,16 +66,16 @@ const notesModule: XynoxaModule = {
         }
       }
 
-      console.log("[NotesModule] Entity-Typen registriert");
+      console.warn("[NotesModule] Entity-Typen registriert");
     } catch (error) {
-      console.log("[NotesModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
+      console.warn("[NotesModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
     }
 
-    console.log("[NotesModule] Modul wurde geladen");
+    console.warn("[NotesModule] Modul wurde geladen");
   },
 
   onUnload: async () => {
-    console.log("[NotesModule] Modul wird entladen...");
+    console.warn("[NotesModule] Modul wird entladen...");
 
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
@@ -86,26 +86,26 @@ const notesModule: XynoxaModule = {
       }
       moduleRouterRegistry.unregister("notes");
 
-      console.log("[NotesModule] Entity-Typen deregistriert");
+      console.warn("[NotesModule] Entity-Typen deregistriert");
     } catch (error) {
       // Client-seitig ok
     }
 
-    console.log("[NotesModule] Modul wurde entladen");
+    console.warn("[NotesModule] Modul wurde entladen");
   },
 
   onInstall: async () => {
-    console.log("[NotesModule] Installation gestartet (keine Migration notwendig)");
+    console.warn("[NotesModule] Installation gestartet (keine Migration notwendig)");
     return [];
   },
 
   onUninstall: async () => {
-    console.log("[NotesModule] Deinstallation abgeschlossen");
+    console.warn("[NotesModule] Deinstallation abgeschlossen");
     return [];
   },
 
   onReindex: async (ownerId, context) => {
-    console.log(`[NotesModule] Indexing notes for user ${ownerId}`);
+    console.warn(`[NotesModule] Indexing notes for user ${ownerId}`);
 
     try {
       const { notes: notesTable, entityTags: entityTagsTable, tags: tagsTable } = await import("@/server/db/schema");
@@ -161,7 +161,7 @@ const notesModule: XynoxaModule = {
         indexed += 1;
       }
 
-      console.log(`[NotesModule] Successfully indexed ${indexed} notes`);
+      console.warn(`[NotesModule] Successfully indexed ${indexed} notes`);
       return indexed;
     } catch (error) {
       console.error("[NotesModule] Failed to index notes:", error);

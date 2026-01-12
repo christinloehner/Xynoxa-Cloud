@@ -12,11 +12,11 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 
 async function main() {
-    console.log("Starting Sync Integration Test...");
+    console.warn("Starting Sync Integration Test...");
 
     // 1. Setup Test User
     const testEmail = `test-sync-${Date.now()}@example.com`;
-    console.log(`Creating user ${testEmail}...`);
+    console.warn(`Creating user ${testEmail}...`);
 
     const [user] = await db.insert(users).values({
         email: testEmail,
@@ -35,10 +35,10 @@ async function main() {
         tokenHash: tokenHash
     });
 
-    console.log("User and Token created.");
+    console.warn("User and Token created.");
 
     // 3. Test Upload Auth (Mock Request)
-    console.log("Testing Upload Auth...");
+    console.warn("Testing Upload Auth...");
 
     // 3a. Fail without token
     const reqNoAuth = new NextRequest("http://localhost/api/upload", {
@@ -49,7 +49,7 @@ async function main() {
     if (resNoAuth.status !== 401) {
         throw new Error(`Expected 401 for no auth, got ${resNoAuth.status}`);
     }
-    console.log("-> No Auth: 401 OK");
+    console.warn("-> No Auth: 401 OK");
 
     // 3b. Success with token
     // We need to construct a valid FormData with a file
@@ -74,14 +74,14 @@ async function main() {
         if (resAuth.status === 401) {
             throw new Error("Got 401 with valid token!");
         }
-        console.log(`-> Auth: ${resAuth.status} (Expected 201 or 400 if body parsing fails, but NOT 401)`);
+        console.warn(`-> Auth: ${resAuth.status} (Expected 201 or 400 if body parsing fails, but NOT 401)`);
     } catch (e: any) {
-        console.log("Auth request failed (likely body parsing):", e.message);
+        console.warn("Auth request failed (likely body parsing):", e.message);
         // If we got past auth check, that's partial success.
     }
 
     // 4. Test Sync Pull via TRPC
-    console.log("Testing Sync Pull...");
+    console.warn("Testing Sync Pull...");
 
     // Create caller with context
     const caller = appRouter.createCaller({
@@ -92,7 +92,7 @@ async function main() {
 
     // 4a. Initial Pull (Empty)
     const initialSync = await caller.sync.pull({ cursor: 0 });
-    console.log("Initial Sync Items:", initialSync.files.length + initialSync.folders.length);
+    console.warn("Initial Sync Items:", initialSync.files.length + initialSync.folders.length);
 
     // 4b. Create File (simulate directly in DB to avoid relying on Upload route success)
     await db.insert(files).values({
@@ -112,20 +112,20 @@ async function main() {
     const pastCursor = Date.now() - 10000;
     const pullWithChanges = await caller.sync.pull({ cursor: pastCursor });
 
-    console.log("Pull since 10s ago items:", pullWithChanges.files.length);
+    console.warn("Pull since 10s ago items:", pullWithChanges.files.length);
 
     if (pullWithChanges.files.length !== 1) {
         console.error("Expected 1 file, got", pullWithChanges.files.length);
         // Doing a raw select to debug
         const allFiles = await db.select().from(files).where(eq(files.ownerId, user.id));
-        console.log("Total files in DB for user:", allFiles.length);
+        console.warn("Total files in DB for user:", allFiles.length);
     } else {
-        console.log("-> Sync Pull: OK");
+        console.warn("-> Sync Pull: OK");
     }
 
     // Cleanup
     await db.delete(users).where(eq(users.id, user.id));
-    console.log("Cleanup done.");
+    console.warn("Cleanup done.");
 }
 
 main().catch(console.error).then(() => process.exit(0));

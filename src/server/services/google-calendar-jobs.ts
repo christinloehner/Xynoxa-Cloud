@@ -8,7 +8,7 @@ import { calendarGoogleCalendars } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 
 export async function handleGoogleSyncJob(userId: string, reason?: string) {
-  console.log(`Google Sync für ${userId} (Reason: ${reason ?? "unspecified"})`);
+  console.warn(`Google Sync für ${userId} (Reason: ${reason ?? "unspecified"})`);
   const calendars = await db
     .select()
     .from(calendarGoogleCalendars)

@@ -60,18 +60,18 @@ class ModuleLoaderClass implements ModuleRegistry {
     for (const importModule of moduleContexts) {
       try {
         const moduleExport = await importModule();
-        const module: XynoxaModule = moduleExport.default;
+        const moduleEntry: XynoxaModule = moduleExport.default;
         
-        if (!this.validateModule(module)) {
+        if (!this.validateModule(moduleEntry)) {
           continue;
         }
         
-        const isActive = activeModuleIds.includes(module.metadata.id);
+        const isActive = activeModuleIds.includes(moduleEntry.metadata.id);
         if (isActive) {
-          this.register(module);
-          logDebug("[ModuleLoader] Loaded active module", { moduleId: module.metadata.id });
+          this.register(moduleEntry);
+          logDebug("[ModuleLoader] Loaded active module", { moduleId: moduleEntry.metadata.id });
         } else {
-          logDebug("[ModuleLoader] Skipping inactive module", { moduleId: module.metadata.id });
+          logDebug("[ModuleLoader] Skipping inactive module", { moduleId: moduleEntry.metadata.id });
         }
       } catch (error) {
         logError("[ModuleLoader] Failed to load module", error);
@@ -82,18 +82,18 @@ class ModuleLoaderClass implements ModuleRegistry {
   /**
    * Validiert ein Modul
    */
-  private validateModule(module: any): module is XynoxaModule {
-    if (!module || typeof module !== "object") {
+  private validateModule(moduleEntry: any): moduleEntry is XynoxaModule {
+    if (!moduleEntry || typeof moduleEntry !== "object") {
       console.error("[ModuleLoader] Invalid module: not an object");
       return false;
     }
 
-    if (!module.metadata) {
+    if (!moduleEntry.metadata) {
       console.error("[ModuleLoader] Invalid module: missing metadata");
       return false;
     }
 
-    if (!module.metadata.id || !module.metadata.name || !module.metadata.version) {
+    if (!moduleEntry.metadata.id || !moduleEntry.metadata.name || !moduleEntry.metadata.version) {
       console.error("[ModuleLoader] Invalid module: incomplete metadata");
       return false;
     }
@@ -104,26 +104,26 @@ class ModuleLoaderClass implements ModuleRegistry {
   /**
    * Registriert ein Modul
    */
-  register(module: XynoxaModule) {
-    if (this.modules.has(module.metadata.id)) {
-      console.warn(`[ModuleLoader] Module ${module.metadata.id} already registered, skipping`);
+  register(moduleEntry: XynoxaModule) {
+    if (this.modules.has(moduleEntry.metadata.id)) {
+      console.warn(`[ModuleLoader] Module ${moduleEntry.metadata.id} already registered, skipping`);
       return;
     }
 
     logDebug("[ModuleLoader] Registering module", {
-      moduleId: module.metadata.id,
-      name: module.metadata.name,
-      version: module.metadata.version
+      moduleId: moduleEntry.metadata.id,
+      name: moduleEntry.metadata.name,
+      version: moduleEntry.metadata.version
     });
     
-    this.modules.set(module.metadata.id, module);
+    this.modules.set(moduleEntry.metadata.id, moduleEntry);
     
     // Rufe onLoad Hook auf
-    if (module.onLoad) {
+    if (moduleEntry.onLoad) {
       try {
-        module.onLoad();
+        moduleEntry.onLoad();
       } catch (error) {
-        logError("[ModuleLoader] Error in onLoad hook", error, { moduleId: module.metadata.id });
+        logError("[ModuleLoader] Error in onLoad hook", error, { moduleId: moduleEntry.metadata.id });
       }
     }
   }
@@ -132,15 +132,15 @@ class ModuleLoaderClass implements ModuleRegistry {
    * Entfernt ein Modul aus der Registry
    */
   unregister(moduleId: string) {
-    const module = this.modules.get(moduleId);
-    if (!module) return;
+    const moduleEntry = this.modules.get(moduleId);
+    if (!moduleEntry) return;
 
     logDebug("[ModuleLoader] Unregistering module", { moduleId });
     
     // Rufe onUnload Hook auf
-    if (module.onUnload) {
+    if (moduleEntry.onUnload) {
       try {
-        module.onUnload();
+        moduleEntry.onUnload();
       } catch (error) {
         logError("[ModuleLoader] Error in onUnload hook", error, { moduleId });
       }
@@ -169,9 +169,9 @@ class ModuleLoaderClass implements ModuleRegistry {
   getAllNavigation(): ModuleNavigationItem[] {
     const items: ModuleNavigationItem[] = [];
     
-    for (const module of this.modules.values()) {
-      if (module.navigation) {
-        items.push(...module.navigation);
+    for (const moduleEntry of this.modules.values()) {
+      if (moduleEntry.navigation) {
+        items.push(...moduleEntry.navigation);
       }
     }
     
@@ -207,12 +207,12 @@ class ModuleLoaderClass implements ModuleRegistry {
    * Trigger onUserLogin für alle Module
    */
   async triggerUserLogin(userId: string) {
-    for (const module of this.modules.values()) {
-      if (module.onUserLogin) {
+    for (const moduleEntry of this.modules.values()) {
+      if (moduleEntry.onUserLogin) {
         try {
-          await module.onUserLogin(userId);
+          await moduleEntry.onUserLogin(userId);
         } catch (error) {
-          logError("[ModuleLoader] Error in onUserLogin hook", error, { moduleId: module.metadata.id });
+          logError("[ModuleLoader] Error in onUserLogin hook", error, { moduleId: moduleEntry.metadata.id });
         }
       }
     }
@@ -222,12 +222,12 @@ class ModuleLoaderClass implements ModuleRegistry {
    * Trigger onUserLogout für alle Module
    */
   async triggerUserLogout() {
-    for (const module of this.modules.values()) {
-      if (module.onUserLogout) {
+    for (const moduleEntry of this.modules.values()) {
+      if (moduleEntry.onUserLogout) {
         try {
-          await module.onUserLogout();
+          await moduleEntry.onUserLogout();
         } catch (error) {
-          logError("[ModuleLoader] Error in onUserLogout hook", error, { moduleId: module.metadata.id });
+          logError("[ModuleLoader] Error in onUserLogout hook", error, { moduleId: moduleEntry.metadata.id });
         }
       }
     }

@@ -201,7 +201,7 @@ export async function runOrphanRepair(onProgress?: ProgressFn) {
     await report(onProgress, processed, total);
   }
 
-  console.log(`[maintenance] Orphan-Reparatur fertig. processed=${processed}, created=${created}, skippedUnknownOwner=${skippedUnknownOwner}`);
+  console.warn(`[maintenance] Orphan-Reparatur fertig. processed=${processed}, created=${created}, skippedUnknownOwner=${skippedUnknownOwner}`);
   return { processed, created, skippedUnknownOwner };
 }
 

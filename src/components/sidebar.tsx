@@ -61,7 +61,7 @@ export function Sidebar({ userRole }: { userRole?: string }) {
         return;
       }
 
-      console.log("[Sidebar] Active module IDs from API:", activeModuleIds);
+      console.warn("[Sidebar] Active module IDs from API:", activeModuleIds);
 
       const moduleById = new Map(
         CLIENT_MODULES
@@ -102,7 +102,7 @@ export function Sidebar({ userRole }: { userRole?: string }) {
       items.sort((a, b) => a.label.localeCompare(b.label, 'de'));
       adminItems.sort((a, b) => a.label.localeCompare(b.label, 'de'));
       
-      console.log("[Sidebar] Loaded navigation items:", items);
+      console.warn("[Sidebar] Loaded navigation items:", items);
       setModuleNavItems(items);
       setModuleAdminItems(adminItems);
     };

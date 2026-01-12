@@ -82,26 +82,26 @@ export async function renderModuleRoute(
     const modules = ROUTE_MODULES.filter((m) => activeModuleIds.includes(m.metadata.id));
     logDebug("[ModuleRoute] Loaded modules", { path, count: modules.length, moduleIds: modules.map((m) => m.metadata.id) });
 
-    for (const module of modules) {
-      const routes = module.routes ?? [];
+    for (const moduleEntry of modules) {
+      const routes = moduleEntry.routes ?? [];
       for (const route of routes) {
         const { match, params: matchedParams } = matchRoute(route.path, path);
         if (!match) continue;
 
         if (!roleAllows(session.userRole, route.requiredRole)) {
-          logDebug("[ModuleRoute] Role denied", { path, moduleId: module.metadata.id, requiredRole: route.requiredRole, userRole: session.userRole });
+          logDebug("[ModuleRoute] Role denied", { path, moduleId: moduleEntry.metadata.id, requiredRole: route.requiredRole, userRole: session.userRole });
           redirect("/dashboard");
         }
 
         if (!route.component) {
-          logError("[ModuleRoute] Missing component for route", undefined, { path, moduleId: module.metadata.id, route: route.path });
+          logError("[ModuleRoute] Missing component for route", undefined, { path, moduleId: moduleEntry.metadata.id, route: route.path });
           return renderModuleError("Modul-Route ist unvollständig", "Kein Component registriert.", path);
         }
 
         const Component = route.component;
         const mergedParams = { ...params, ...matchedParams };
         const props = route.getProps ? route.getProps(mergedParams, searchParams) : {};
-        logDebug("[ModuleRoute] Route matched", { path, moduleId: module.metadata.id, route: route.path });
+        logDebug("[ModuleRoute] Route matched", { path, moduleId: moduleEntry.metadata.id, route: route.path });
         return <Component {...props} />;
       }
     }
@@ -135,13 +135,13 @@ export async function renderModulePage(
       redirect("/dashboard");
     }
 
-    const module = ROUTE_MODULES.find((m) => m.metadata.id === moduleId);
-    if (!module) {
+    const moduleEntry = ROUTE_MODULES.find((m) => m.metadata.id === moduleId);
+    if (!moduleEntry) {
       logError("[ModulePage] Module not found in registry", undefined, { moduleId, routePath });
       return renderModuleError("Modul nicht gefunden", `Kein registriertes Modul mit ID "${moduleId}".`, routePath);
     }
 
-    const route = (module.routes ?? []).find((r) => r.path === routePath);
+    const route = (moduleEntry.routes ?? []).find((r) => r.path === routePath);
     if (!route) {
       logError("[ModulePage] Route not found in module", undefined, { moduleId, routePath });
       return renderModuleError("Route nicht gefunden", `Kein Route-Definition für "${routePath}".`, routePath);

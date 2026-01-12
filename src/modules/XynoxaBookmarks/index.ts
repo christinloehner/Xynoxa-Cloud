@@ -63,7 +63,7 @@ const bookmarksModule: XynoxaModule = {
   },
 
   onLoad: async () => {
-    console.log("[BookmarksModule] Modul wird geladen...");
+    console.warn("[BookmarksModule] Modul wird geladen...");
     
     // Registriere Entity-Typen im Module Router Registry
     // WICHTIG: Beide Imports müssen dynamisch sein, um Client-Bundle-Probleme zu vermeiden
@@ -84,17 +84,17 @@ const bookmarksModule: XynoxaModule = {
         }
       }
       
-      console.log("[BookmarksModule] Entity-Typen registriert");
+      console.warn("[BookmarksModule] Entity-Typen registriert");
     } catch (error) {
       // Client-seitig wird dieser Import fehlschlagen, das ist OK
-      console.log("[BookmarksModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
+      console.warn("[BookmarksModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
     }
     
-    console.log("[BookmarksModule] Modul wurde geladen");
+    console.warn("[BookmarksModule] Modul wurde geladen");
   },
 
   onUnload: async () => {
-    console.log("[BookmarksModule] Modul wird entladen...");
+    console.warn("[BookmarksModule] Modul wird entladen...");
     
     // Deregistriere Entity-Typen
     // WICHTIG: Beide Imports müssen dynamisch sein, um Client-Bundle-Probleme zu vermeiden
@@ -107,12 +107,12 @@ const bookmarksModule: XynoxaModule = {
       }
       moduleRouterRegistry.unregister("bookmarks");
       
-      console.log("[BookmarksModule] Entity-Typen deregistriert");
+      console.warn("[BookmarksModule] Entity-Typen deregistriert");
     } catch (error) {
       // Client-seitig wird dieser Import fehlschlagen, das ist OK
     }
     
-    console.log("[BookmarksModule] Modul wurde entladen");
+    console.warn("[BookmarksModule] Modul wurde entladen");
   },
 
   /**
@@ -120,7 +120,7 @@ const bookmarksModule: XynoxaModule = {
    * Erstellt die benötigten Datenbank-Tabellen für das Bookmarks-Modul
    */
   onInstall: async () => {
-    console.log("[BookmarksModule] Starting installation...");
+    console.warn("[BookmarksModule] Starting installation...");
     
     const sqlStatements: string[] = [];
 
@@ -155,7 +155,7 @@ const bookmarksModule: XynoxaModule = {
       END $$;
     `);
 
-    console.log("[BookmarksModule] Installation completed successfully");
+    console.warn("[BookmarksModule] Installation completed successfully");
     return sqlStatements;
   },
 
@@ -164,7 +164,7 @@ const bookmarksModule: XynoxaModule = {
    * Entfernt die Modul-Tabellen (optional - könnte auch Daten behalten)
    */
   onUninstall: async () => {
-    console.log("[BookmarksModule] Starting uninstallation...");
+    console.warn("[BookmarksModule] Starting uninstallation...");
     
     // Warnung: Dies löscht alle Bookmark-Daten!
     // In Production könnte man hier nur die Tabelle umbenennen oder archivieren
@@ -173,7 +173,7 @@ const bookmarksModule: XynoxaModule = {
       // Kommentiert aus - wir wollen Daten nicht löschen bei Deaktivierung
     ];
 
-    console.log("[BookmarksModule] Uninstallation completed (no data deleted)");
+    console.warn("[BookmarksModule] Uninstallation completed (no data deleted)");
     return sqlStatements;
   },
 
@@ -182,7 +182,7 @@ const bookmarksModule: XynoxaModule = {
    * Indexiert alle Bookmarks für die Volltext- und semantische Suche
    */
   onReindex: async (ownerId, context) => {
-    console.log(`[BookmarksModule] Indexing bookmarks for user ${ownerId}`);
+    console.warn(`[BookmarksModule] Indexing bookmarks for user ${ownerId}`);
     
     try {
       // Dynamischer Import um Server-Code nur auf Server zu laden
@@ -192,7 +192,7 @@ const bookmarksModule: XynoxaModule = {
       // Lade alle Bookmarks des Users aus der mod_bookmarks Tabelle
       const bookmarks = await context.db.select().from(bookmarksTable).where(eq(bookmarksTable.ownerId, ownerId));
 
-      console.log(`[BookmarksModule] Found ${bookmarks.length} bookmarks to index`);
+      console.warn(`[BookmarksModule] Found ${bookmarks.length} bookmarks to index`);
 
       // Indexiere jeden Bookmark in Meilisearch
       for (const bookmark of bookmarks) {
@@ -218,7 +218,7 @@ const bookmarksModule: XynoxaModule = {
         });
       }
 
-      console.log(`[BookmarksModule] Successfully indexed ${bookmarks.length} bookmarks`);
+      console.warn(`[BookmarksModule] Successfully indexed ${bookmarks.length} bookmarks`);
       return bookmarks.length;
     } catch (error) {
       console.error("[BookmarksModule] Failed to index bookmarks:", error);

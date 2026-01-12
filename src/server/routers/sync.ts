@@ -16,7 +16,7 @@ export const syncRouter = router({
         .query(async ({ ctx, input }) => {
             const cursor = input.cursor ?? 0;
 
-            console.log(`Sync pull (Journal) for user ${ctx.userId} since cursor ${cursor}`);
+            console.warn(`Sync pull (Journal) for user ${ctx.userId} since cursor ${cursor}`);
 
             const events = await ctx.db
                 .select()

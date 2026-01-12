@@ -187,15 +187,15 @@ export async function reindexAll(ownerId: string, onProgress?: (percent: number)
       db
     };
     
-    for (const module of activeModules) {
-      if (module.onReindex) {
+    for (const moduleEntry of activeModules) {
+      if (moduleEntry.onReindex) {
         try {
-          console.log(`[Reindex] Calling onReindex for module: ${module.metadata.id}`);
-          const count = await module.onReindex(ownerId, searchContext);
-          moduleCounts[module.metadata.id] = count;
-          console.log(`[Reindex] Module ${module.metadata.id} indexed ${count} documents`);
+          console.warn(`[Reindex] Calling onReindex for module: ${moduleEntry.metadata.id}`);
+          const count = await moduleEntry.onReindex(ownerId, searchContext);
+          moduleCounts[moduleEntry.metadata.id] = count;
+          console.warn(`[Reindex] Module ${moduleEntry.metadata.id} indexed ${count} documents`);
         } catch (error) {
-          console.error(`[Reindex] Failed to index module ${module.metadata.id}:`, error);
+          console.error(`[Reindex] Failed to index module ${moduleEntry.metadata.id}:`, error);
         }
       }
     }

@@ -23,11 +23,11 @@ let embedder: any = null;
 
 async function getEmbedder() {
   if (!embedder) {
-    console.log("Loading embedding model...");
+    console.warn("Loading embedding model...");
     embedder = await pipeline("feature-extraction", MODEL_NAME, {
       quantized: false, // Use full precision if possible, or true for speed/size
     });
-    console.log("Embedding model loaded.");
+    console.warn("Embedding model loaded.");
   }
   return embedder;
 }

@@ -131,10 +131,10 @@ async function main() {
 
   await replaceInFiles(targetDir, replacers);
 
-  console.log(`Module created at ${targetDir}`);
-  console.log(`- id: ${moduleId}`);
-  console.log(`- name: ${moduleName}`);
-  console.log(`- folder: ${moduleFolder}`);
+  console.warn(`Module created at ${targetDir}`);
+  console.warn(`- id: ${moduleId}`);
+  console.warn(`- name: ${moduleName}`);
+  console.warn(`- folder: ${moduleFolder}`);
 }
 
 main().catch((err) => {

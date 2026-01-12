@@ -102,7 +102,7 @@ async function main() {
   }
 
   await removeStaleGeneratedPages(targetFiles);
-  console.log(`[Module Pages] Generated ${targetFiles.size} route wrappers`);
+  console.warn(`[Module Pages] Generated ${targetFiles.size} route wrappers`);
 }
 
 main().catch((err) => {

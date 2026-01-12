@@ -71,7 +71,7 @@ const moduleTemplate: XynoxaModule = {
   },
 
   onLoad: async () => {
-    console.log("[ModuleTemplate] Modul wird geladen...");
+    console.warn("[ModuleTemplate] Modul wird geladen...");
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
       const { default: moduleRouter, entityTypes } = await import("./router");
@@ -89,12 +89,12 @@ const moduleTemplate: XynoxaModule = {
         }
       }
     } catch (error) {
-      console.log("[ModuleTemplate] Entity-Typ Registrierung uebersprungen (Client-Seite)");
+      console.warn("[ModuleTemplate] Entity-Typ Registrierung uebersprungen (Client-Seite)");
     }
   },
 
   onUnload: async () => {
-    console.log("[ModuleTemplate] Modul wird entladen...");
+    console.warn("[ModuleTemplate] Modul wird entladen...");
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
       const { entityTypes } = await import("./router");
@@ -108,15 +108,15 @@ const moduleTemplate: XynoxaModule = {
   },
 
   onUserLogin: async (userId) => {
-    console.log(`[ModuleTemplate] User ${userId} logged in`);
+    console.warn(`[ModuleTemplate] User ${userId} logged in`);
   },
 
   onUserLogout: async () => {
-    console.log("[ModuleTemplate] User logged out");
+    console.warn("[ModuleTemplate] User logged out");
   },
 
   onInstall: async () => {
-    console.log("[ModuleTemplate] Installation gestartet...");
+    console.warn("[ModuleTemplate] Installation gestartet...");
     // Rueckgabe von SQL Statements (optional)
     return [
       `
@@ -134,12 +134,12 @@ const moduleTemplate: XynoxaModule = {
   },
 
   onUninstall: async () => {
-    console.log("[ModuleTemplate] Deinstallation abgeschlossen (keine Daten geloescht)");
+    console.warn("[ModuleTemplate] Deinstallation abgeschlossen (keine Daten geloescht)");
     return [];
   },
 
   onReindex: async (ownerId, context) => {
-    console.log(`[ModuleTemplate] Reindex fuer User ${ownerId}`);
+    console.warn(`[ModuleTemplate] Reindex fuer User ${ownerId}`);
     const { moduleTemplateItems } = await import("./schema");
     const { eq } = await import("drizzle-orm");
 

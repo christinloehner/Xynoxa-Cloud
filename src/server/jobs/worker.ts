@@ -20,7 +20,7 @@ import { generateThumbnailForVersion } from "../services/thumbnails";
 import { createServer } from "http";
 import { QueueEvents } from "bullmq";
 
-console.log("Starting Workers...");
+console.warn("Starting Workers...");
 
 // Health check server
 const healthServer = createServer((req, res) => {
@@ -34,7 +34,7 @@ const healthServer = createServer((req, res) => {
 });
 
 healthServer.listen(3001, () => {
-    console.log("Worker health check listening on port 3001");
+    console.warn("Worker health check listening on port 3001");
 });
 
 const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
@@ -44,7 +44,7 @@ const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", 
 const emailWorker = new Worker<EmailJobData>(
     "email-queue",
     async (job) => {
-        console.log(`Processing Email Job ${job.id}: ${job.data.kind}`);
+        console.warn(`Processing Email Job ${job.id}: ${job.data.kind}`);
 
         try {
             switch (job.data.kind) {
@@ -78,7 +78,7 @@ const emailWorker = new Worker<EmailJobData>(
                 }
                 // Add other cases here
             }
-            console.log(`Email Job ${job.id} completed successfully`);
+            console.warn(`Email Job ${job.id} completed successfully`);
         } catch (error) {
             console.error(`Email Job ${job.id} failed:`, error);
             throw error;
@@ -90,14 +90,14 @@ const emailWorker = new Worker<EmailJobData>(
 const searchWorker = new Worker<SearchJobData>(
     "search-queue",
     async (job) => {
-        console.log(`Processing Search Job ${job.id}: ${job.data.kind}`);
+        console.warn(`Processing Search Job ${job.id}: ${job.data.kind}`);
         try {
             if (job.data.kind === "reindex") {
                 await reindexAll(job.data.ownerId, async (p) => {
                     await job.updateProgress(p);
                 });
             }
-            console.log(`Search Job ${job.id} completed`);
+            console.warn(`Search Job ${job.id} completed`);
         } catch (error) {
             console.error(`Search Job ${job.id} failed:`, error);
             throw error;
@@ -109,19 +109,19 @@ const searchWorker = new Worker<SearchJobData>(
 const maintenanceWorker = new Worker<MaintenanceJobData>(
     "maintenance-queue",
     async (job) => {
-        console.log(`Processing Maintenance Job ${job.id}: ${job.data.kind}`);
+        console.warn(`Processing Maintenance Job ${job.id}: ${job.data.kind}`);
         try {
             if (job.data.kind === "orphan-repair") {
                 const res = await runOrphanRepair(async (p) => job.updateProgress(p));
-                console.log(`Orphan-Reparatur Ergebnis:`, res);
+                console.warn(`Orphan-Reparatur Ergebnis:`, res);
             } else if (job.data.kind === "full-reset") {
                 const res = await runFullReset(async (p) => job.updateProgress(p));
-                console.log(`Full-Reset Ergebnis:`, res);
+                console.warn(`Full-Reset Ergebnis:`, res);
             } else if (job.data.kind === "chunk-gc") {
                 const res = await cleanupUnusedChunks();
-                console.log(`Chunk-GC Ergebnis:`, res);
+                console.warn(`Chunk-GC Ergebnis:`, res);
             }
-            console.log(`Maintenance Job ${job.id} completed`);
+            console.warn(`Maintenance Job ${job.id} completed`);
         } catch (error) {
             console.error(`Maintenance Job ${job.id} failed:`, error);
             throw error;
@@ -149,7 +149,7 @@ setInterval(enqueueGc, SIX_HOURS);
 const calendarWorker = new Worker<CalendarJobData>(
     "calendar-queue",
     async (job) => {
-        console.log(`Processing Calendar Job ${job.id}: ${job.data.kind}`);
+        console.warn(`Processing Calendar Job ${job.id}: ${job.data.kind}`);
         if (job.data.kind === "google-sync") {
             await handleGoogleSyncJob(job.data.userId, job.data.reason);
         } else if (job.data.kind === "google-push-event") {

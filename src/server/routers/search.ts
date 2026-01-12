@@ -21,13 +21,13 @@ async function getSearchResultUrl(type: string, id: string): Promise<string> {
   
   // Suche nach einem Modul, das diesen Entity-Type handhabt
   // Konvention: Module die "bookmark" indexieren nutzen entityType "bookmark"
-  for (const module of activeModules) {
-    if (module.getSearchResultUrl) {
+  for (const moduleEntry of activeModules) {
+    if (moduleEntry.getSearchResultUrl) {
       try {
-        const url = module.getSearchResultUrl(id, type);
+        const url = moduleEntry.getSearchResultUrl(id, type);
         if (url) return url;
       } catch (error) {
-        console.error(`[SearchRouter] Error getting URL from module ${module.metadata.id}:`, error);
+        console.error(`[SearchRouter] Error getting URL from module ${moduleEntry.metadata.id}:`, error);
       }
     }
   }

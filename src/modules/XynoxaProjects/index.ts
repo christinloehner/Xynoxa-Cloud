@@ -60,7 +60,7 @@ const projectsModule: XynoxaModule = {
   },
 
   onLoad: async () => {
-    console.log("[ProjectsModule] Modul wird geladen...");
+    console.warn("[ProjectsModule] Modul wird geladen...");
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
       const { default: projectsRouter, entityTypes } = await import("./router");
@@ -78,14 +78,14 @@ const projectsModule: XynoxaModule = {
         }
       }
 
-      console.log("[ProjectsModule] Entity-Typen registriert");
+      console.warn("[ProjectsModule] Entity-Typen registriert");
     } catch (error) {
-      console.log("[ProjectsModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
+      console.warn("[ProjectsModule] Entity-Typ Registrierung übersprungen (Client-Seite)");
     }
   },
 
   onUnload: async () => {
-    console.log("[ProjectsModule] Modul wird entladen...");
+    console.warn("[ProjectsModule] Modul wird entladen...");
     try {
       const { moduleRouterRegistry } = await import("@/server/module-router-registry");
       const { entityTypes } = await import("./router");
@@ -99,7 +99,7 @@ const projectsModule: XynoxaModule = {
   },
 
   onInstall: async () => {
-    console.log("[ProjectsModule] Installation gestartet...");
+    console.warn("[ProjectsModule] Installation gestartet...");
     const sqlStatements: string[] = [];
 
     sqlStatements.push(`
@@ -195,17 +195,17 @@ const projectsModule: XynoxaModule = {
       CREATE INDEX IF NOT EXISTS "mod_project_milestones_project_idx" ON "mod_project_milestones"("project_id");
     `);
 
-    console.log("[ProjectsModule] Installation abgeschlossen");
+    console.warn("[ProjectsModule] Installation abgeschlossen");
     return sqlStatements;
   },
 
   onUninstall: async () => {
-    console.log("[ProjectsModule] Deinstallation abgeschlossen (keine Daten gelöscht)");
+    console.warn("[ProjectsModule] Deinstallation abgeschlossen (keine Daten gelöscht)");
     return [];
   },
 
   onReindex: async (ownerId, context) => {
-    console.log(`[ProjectsModule] Reindexing projects for user ${ownerId}`);
+    console.warn(`[ProjectsModule] Reindexing projects for user ${ownerId}`);
 
     await context.ensureIndex("projects", { searchableAttributes: ["name", "description", "tags", "status"] });
     await context.ensureIndex("project_tasks", { searchableAttributes: ["title", "content", "tags", "priority", "status"] });
@@ -292,7 +292,7 @@ const projectsModule: XynoxaModule = {
       count += 1;
     }
 
-    console.log(`[ProjectsModule] Indexed ${count} documents`);
+    console.warn(`[ProjectsModule] Indexed ${count} documents`);
     return count;
   }
 };

@@ -13,25 +13,25 @@ async function main() {
     });
 
     const STORAGE_ROOT = process.env.STORAGE_PATH || path.resolve(process.cwd(), "storage", "files");
-    console.log("STORAGE_ROOT:", STORAGE_ROOT);
+    console.warn("STORAGE_ROOT:", STORAGE_ROOT);
 
     try {
         await client.connect();
 
-        console.log("Listing ALL Group Folders:");
+        console.warn("Listing ALL Group Folders:");
         const allGroups = await client.query("SELECT id, name FROM group_folders");
-        allGroups.rows.forEach(r => console.log(`- ${r.name} (${r.id})`));
+        allGroups.rows.forEach(r => console.warn(`- ${r.name} (${r.id})`));
 
-        console.log("Listing last 10 created files:");
+        console.warn("Listing last 10 created files:");
         const lastFiles = await client.query("SELECT id, path, original_name, group_folder_id, storage_path FROM files ORDER BY created_at DESC LIMIT 10");
         lastFiles.rows.forEach(r => {
-            console.log(`File: ${r.path} (Original: ${r.original_name}) | GF: ${r.group_folder_id} | Storage: ${r.storage_path}`);
+            console.warn(`File: ${r.path} (Original: ${r.original_name}) | GF: ${r.group_folder_id} | Storage: ${r.storage_path}`);
         });
 
         // Exit early
         process.exit(0);
 
-        console.log("Searching for files...");
+        console.warn("Searching for files...");
 
         let query = "SELECT id, owner_id, group_folder_id, path, storage_path FROM files WHERE path LIKE $1 OR original_name LIKE $1";
         let params = ['%harmonikas%']; // broader search
@@ -39,47 +39,47 @@ async function main() {
         if (gfId) {
             query = "SELECT id, owner_id, group_folder_id, path, storage_path FROM files WHERE group_folder_id = $1";
             params = [gfId];
-            console.log("Listing ALL files in Group Folder...");
+            console.warn("Listing ALL files in Group Folder...");
         }
 
         const fileRes = await client.query(query, params);
 
         if (fileRes.rows.length === 0) {
-            console.log("File not found in DB.");
+            console.warn("File not found in DB.");
             process.exit(0);
         }
 
         for (const file of fileRes.rows) {
-            console.log("------------------------------------------------");
-            console.log("File ID:", file.id);
-            console.log("Owner ID:", file.owner_id);
-            console.log("Group Folder ID:", file.group_folder_id);
-            console.log("Logical Path:", file.path);
-            console.log("Storage Path (DB):", file.storage_path);
+            console.warn("------------------------------------------------");
+            console.warn("File ID:", file.id);
+            console.warn("Owner ID:", file.owner_id);
+            console.warn("Group Folder ID:", file.group_folder_id);
+            console.warn("Logical Path:", file.path);
+            console.warn("Storage Path (DB):", file.storage_path);
 
             const realPath = path.join(STORAGE_ROOT, file.storage_path);
-            console.log("Absolute FS Path:", realPath);
+            console.warn("Absolute FS Path:", realPath);
 
             if (fs.existsSync(realPath)) {
-                console.log("✅ File EXISTS on disk.");
+                console.warn("✅ File EXISTS on disk.");
                 const stats = fs.statSync(realPath);
-                console.log("Size:", stats.size);
+                console.warn("Size:", stats.size);
             } else {
-                console.log("❌ File MISSING on disk.");
+                console.warn("❌ File MISSING on disk.");
 
                 // Debug parent dir
                 const parentDir = path.dirname(realPath);
                 if (fs.existsSync(parentDir)) {
-                    console.log(`Parent dir (${parentDir}) exists. Contents:`);
-                    console.log(fs.readdirSync(parentDir));
+                    console.warn(`Parent dir (${parentDir}) exists. Contents:`);
+                    console.warn(fs.readdirSync(parentDir));
                 } else {
-                    console.log(`Parent dir (${parentDir}) missing.`);
+                    console.warn(`Parent dir (${parentDir}) missing.`);
                     // Check user root
                     const userRoot = path.join(STORAGE_ROOT, file.owner_id);
                     if (fs.existsSync(userRoot)) {
-                        console.log(`User root (${userRoot}) exists.`);
+                        console.warn(`User root (${userRoot}) exists.`);
                     } else {
-                        console.log(`User root (${userRoot}) missing.`);
+                        console.warn(`User root (${userRoot}) missing.`);
                     }
                 }
             }

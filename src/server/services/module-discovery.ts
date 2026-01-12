@@ -37,7 +37,7 @@ export function discoverModulesRuntime(forceRefresh = false): DiscoveredModule[]
     return moduleCache;
   }
 
-  console.log("[Runtime Discovery] Scanning for modules...");
+  console.warn("[Runtime Discovery] Scanning for modules...");
   
   const modulesDir = path.join(process.cwd(), "src/modules");
   
@@ -77,14 +77,14 @@ export function discoverModulesRuntime(forceRefresh = false): DiscoveredModule[]
       importPath: `@/modules/${entry.name}`
     });
 
-    console.log(`[Runtime Discovery] ✓ Found module: ${entry.name}`);
+    console.warn(`[Runtime Discovery] ✓ Found module: ${entry.name}`);
   }
 
   // Cache aktualisieren
   moduleCache = modules;
   cacheTimestamp = now;
 
-  console.log(`[Runtime Discovery] Found ${modules.length} module(s)`);
+  console.warn(`[Runtime Discovery] Found ${modules.length} module(s)`);
   return modules;
 }
 
@@ -111,7 +111,7 @@ export async function loadModuleRuntime(moduleName: string) {
 export function invalidateModuleCache(): void {
   moduleCache = null;
   cacheTimestamp = 0;
-  console.log("[Runtime Discovery] Module cache invalidated");
+  console.warn("[Runtime Discovery] Module cache invalidated");
 }
 
 /**

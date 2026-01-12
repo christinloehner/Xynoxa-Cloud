@@ -35,7 +35,7 @@ interface DiscoveredModule {
 }
 
 function discoverModules(): DiscoveredModule[] {
-  console.log("[Module Discovery] Scanning for modules...");
+  console.warn("[Module Discovery] Scanning for modules...");
   
   if (!fs.existsSync(MODULES_DIR)) {
     console.error(`[Module Discovery] Modules directory not found: ${MODULES_DIR}`);
@@ -77,7 +77,7 @@ function discoverModules(): DiscoveredModule[] {
       hasClient
     });
 
-    console.log(`[Module Discovery] ✓ Found module: ${entry.name}`);
+    console.warn(`[Module Discovery] ✓ Found module: ${entry.name}`);
   }
 
   return modules;
@@ -201,22 +201,22 @@ ${modules.map((mod) => `  ${mod.name}`).join(",\n")}
 
 function writeRegistry(content: string): void {
   fs.writeFileSync(OUTPUT_FILE, content, "utf8");
-  console.log(`[Module Discovery] ✓ Registry written to ${OUTPUT_FILE}`);
+  console.warn(`[Module Discovery] ✓ Registry written to ${OUTPUT_FILE}`);
 }
 
 function writeServerRegistry(content: string): void {
   fs.writeFileSync(OUTPUT_SERVER_FILE, content, "utf8");
-  console.log(`[Module Discovery] ✓ Server registry written to ${OUTPUT_SERVER_FILE}`);
+  console.warn(`[Module Discovery] ✓ Server registry written to ${OUTPUT_SERVER_FILE}`);
 }
 
 function writeClientRegistry(content: string): void {
   fs.writeFileSync(OUTPUT_CLIENT_FILE, content, "utf8");
-  console.log(`[Module Discovery] ✓ Client registry written to ${OUTPUT_CLIENT_FILE}`);
+  console.warn(`[Module Discovery] ✓ Client registry written to ${OUTPUT_CLIENT_FILE}`);
 }
 
 function writeRouteRegistry(content: string): void {
   fs.writeFileSync(OUTPUT_ROUTE_FILE, content, "utf8");
-  console.log(`[Module Discovery] ✓ Route registry written to ${OUTPUT_ROUTE_FILE}`);
+  console.warn(`[Module Discovery] ✓ Route registry written to ${OUTPUT_ROUTE_FILE}`);
 }
 
 // Main
@@ -226,7 +226,7 @@ try {
   if (modules.length === 0) {
     console.warn("[Module Discovery] No modules found!");
   } else {
-    console.log(`[Module Discovery] Found ${modules.length} module(s)`);
+    console.warn(`[Module Discovery] Found ${modules.length} module(s)`);
   }
   
   const registryContent = generateRegistry(modules);
@@ -238,7 +238,7 @@ try {
   writeClientRegistry(clientRegistryContent);
   writeRouteRegistry(routeRegistryContent);
   
-  console.log("[Module Discovery] ✓ Discovery completed successfully");
+  console.warn("[Module Discovery] ✓ Discovery completed successfully");
   process.exit(0);
 } catch (error) {
   console.error("[Module Discovery] ✗ Error:", error);

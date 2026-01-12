@@ -11,7 +11,7 @@
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    console.log("[Instrumentation] Starting server initialization...");
+    console.warn("[Instrumentation] Starting server initialization...");
 
     try {
       const { registerGlobalErrorHandlers, logInfo } = await import("@/server/services/logger");
@@ -57,7 +57,7 @@ export async function register() {
         END $$;
       `);
       
-      console.log("[Instrumentation] Database migrations applied");
+      console.warn("[Instrumentation] Database migrations applied");
     } catch (error) {
       console.error("[Instrumentation] Database setup failed:", error);
     }
@@ -66,7 +66,7 @@ export async function register() {
     try {
       const { ModuleService } = await import("@/server/services/module-service");
       await ModuleService.discoverAndRegisterModules();
-      console.log("[Instrumentation] Module discovery completed");
+      console.warn("[Instrumentation] Module discovery completed");
     } catch (error) {
       console.error("[Instrumentation] Module discovery failed:", error);
     }

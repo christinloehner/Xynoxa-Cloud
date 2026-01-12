@@ -25,7 +25,7 @@ import { appRouter } from "../src/server/routers/_app";
 import { createCallerFactory } from "../src/server/trpc";
 
 async function main() {
-    console.log("Starting Journal Sync Test...");
+    console.warn("Starting Journal Sync Test...");
 
     // 1. Create User & Token
     const email = `test-journal-${Date.now()}@example.com`;
@@ -35,7 +35,7 @@ async function main() {
         role: "admin", // Need admin for some ops? Or member. create requires 'member'.
     }).returning();
 
-    console.log(`User created: ${user.id}`);
+    console.warn(`User created: ${user.id}`);
 
     // Context Mock
     const ctx = {
@@ -50,25 +50,25 @@ async function main() {
     const caller = createCaller(ctx);
 
     // 2. Create File -> Should create Journal Entry "create"
-    console.log("Testing Create File...");
+    console.warn("Testing Create File...");
     const file = await caller.files.create({
         name: "test-file.txt",
         size: "123",
     });
-    console.log("File created:", file.id);
+    console.warn("File created:", file.id);
 
     // Check Journal
     const eventsAfterCreate = await caller.sync.pull({});
-    console.log("Events after create:", eventsAfterCreate.events.length);
+    console.warn("Events after create:", eventsAfterCreate.events.length);
     const createEvent = eventsAfterCreate.events.find(e => e.entityId === file.id && e.action === "create");
 
     if (!createEvent) throw new Error("Journal missing CREATE event");
-    console.log("✅ Create event found");
+    console.warn("✅ Create event found");
 
     const cursor1 = Number(createEvent.id);
 
     // 3. Rename File -> Should create Journal Entry "move"
-    console.log("Testing Rename File...");
+    console.warn("Testing Rename File...");
     await caller.files.rename({
         id: file.id,
         name: "renamed-file.txt"
@@ -78,34 +78,34 @@ async function main() {
     const moveEvent = eventsAfterRename.events.find(e => e.entityId === file.id && e.action === "move");
 
     if (!moveEvent) throw new Error("Journal missing MOVE event");
-    console.log("✅ Move/Rename event found");
+    console.warn("✅ Move/Rename event found");
 
     const cursor2 = Number(moveEvent.id);
 
     // 4. Soft Delete -> Should create Journal Entry "delete"
-    console.log("Testing Soft Delete...");
+    console.warn("Testing Soft Delete...");
     await caller.files.softDelete({ fileId: file.id });
 
     const eventsAfterDelete = await caller.sync.pull({ cursor: cursor2 });
     const deleteEvent = eventsAfterDelete.events.find(e => e.entityId === file.id && e.action === "delete");
 
     if (!deleteEvent) throw new Error("Journal missing DELETE event");
-    console.log("✅ Delete event found");
+    console.warn("✅ Delete event found");
 
     const cursor3 = Number(deleteEvent.id);
 
     // 5. Restore -> Should create Journal Entry "create" (re-appear)
-    console.log("Testing Restore...");
+    console.warn("Testing Restore...");
     await caller.files.restore({ fileId: file.id });
 
     const eventsAfterRestore = await caller.sync.pull({ cursor: cursor3 });
     const restoreEvent = eventsAfterRestore.events.find(e => e.entityId === file.id && e.action === "create");
 
     if (!restoreEvent) throw new Error("Journal missing CREATE (restore) event");
-    console.log("✅ Restore event found");
+    console.warn("✅ Restore event found");
 
     // 6. Test Update via Upload (New Feature)
-    console.log("Testing Update via Upload...");
+    console.warn("Testing Update via Upload...");
 
     // We need to call the API route handler directly, mocking NextRequest
     const { POST } = await import("../src/app/api/upload/route.ts");
@@ -150,24 +150,24 @@ async function main() {
         console.error("Upload failed", json);
         throw new Error(`Upload Update failed with status ${res.status}`);
     }
-    console.log("✅ Upload Update returned 200");
+    console.warn("✅ Upload Update returned 200");
 
     const eventsAfterUpdate = await caller.sync.pull({ cursor: Number(restoreEvent.id) });
     const updateEvent = eventsAfterUpdate.events.find(e => e.entityId === file.id && e.action === "update");
 
     if (!updateEvent) {
-        console.log("Events found:", eventsAfterUpdate.events);
+        console.warn("Events found:", eventsAfterUpdate.events);
         throw new Error("Journal missing UPDATE event");
     }
-    console.log("✅ Update event found");
+    console.warn("✅ Update event found");
 
     // 7. Verify Metadata Enrichment (New Feature)
     if (!updateEvent.data) throw new Error("Journal event missing enriched data payload");
     if ((updateEvent.data as any).id !== file.id) throw new Error("Enriched data mismatch");
-    console.log("✅ Metadata enrichment verified");
+    console.warn("✅ Metadata enrichment verified");
 
     // 8. Test Direct Download (New Feature)
-    console.log("Testing Direct File Download...");
+    console.warn("Testing Direct File Download...");
     const { GET } = await import("../src/app/api/files/[fileId]/content/route.ts");
 
     const dlReq = new NextRequest(`http://localhost:3000/api/files/${file.id}/content`, {
@@ -183,11 +183,11 @@ async function main() {
 
     const dlContent = await dlRes.text();
     if (dlContent !== "Updated Content") throw new Error("Downloaded content mismatch");
-    console.log("✅ Direct Download verified");
+    console.warn("✅ Direct Download verified");
 
     // Cleanup
     await db.delete(users).where(eq(users.id, user.id));
-    console.log("Cleanup done. Test Passed!");
+    console.warn("Cleanup done. Test Passed!");
 }
 
 main().catch(e => {

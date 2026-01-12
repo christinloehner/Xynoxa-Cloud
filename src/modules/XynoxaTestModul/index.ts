@@ -83,7 +83,7 @@ const testModule: XynoxaModule = {
    * ```
    */
   onLoad: async () => {
-    console.log("[TestModul] Modul wurde geladen");
+    console.warn("[TestModul] Modul wurde geladen");
     // Dieses Modul hat keine Entity-Typen zu registrieren
   },
 
@@ -94,16 +94,16 @@ const testModule: XynoxaModule = {
    * Hier sollten registrierte Entity-Typen wieder deregistriert werden.
    */
   onUnload: async () => {
-    console.log("[TestModul] Modul wurde entladen");
+    console.warn("[TestModul] Modul wurde entladen");
     // Dieses Modul hat keine Entity-Typen zu deregistrieren
   },
 
   onUserLogin: async (userId: string) => {
-    console.log(`[TestModul] User ${userId} hat sich eingeloggt`);
+    console.warn(`[TestModul] User ${userId} hat sich eingeloggt`);
   },
 
   onUserLogout: async () => {
-    console.log("[TestModul] User hat sich ausgeloggt");
+    console.warn("[TestModul] User hat sich ausgeloggt");
   },
 
   /**
@@ -129,7 +129,7 @@ const testModule: XynoxaModule = {
    * ```
    */
   onInstall: async () => {
-    console.log("[TestModul] Installation started (no database changes needed)");
+    console.warn("[TestModul] Installation started (no database changes needed)");
     // Dieses Modul braucht keine Datenbank-Tabellen
     return [];
   },
@@ -143,7 +143,7 @@ const testModule: XynoxaModule = {
    * WARNUNG: Daten werden gelöscht! Überlege gut ob du das willst.
    */
   onUninstall: async () => {
-    console.log("[TestModul] Uninstallation completed");
+    console.warn("[TestModul] Uninstallation completed");
     return [];
   }
 

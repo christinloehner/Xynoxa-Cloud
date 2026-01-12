@@ -28,7 +28,7 @@ export class ModuleService {
    * Echtes Plug & Play - kein Server-Neustart nötig!
    */
   static async discoverAndRegisterModules(): Promise<void> {
-    console.log("[ModuleService] Discovering modules from filesystem...");
+    console.warn("[ModuleService] Discovering modules from filesystem...");
     
     // Invalidiere Cache um sicherzustellen dass wir die neuesten Module finden
     invalidateModuleCache();
@@ -36,33 +36,33 @@ export class ModuleService {
     // Scanne Dateisystem nach Modulen
     const discoveredModules = discoverModulesRuntime(true);
     
-    console.log(`[ModuleService] Found ${discoveredModules.length} modules in filesystem`);
+    console.warn(`[ModuleService] Found ${discoveredModules.length} modules in filesystem`);
     
     // Lade und registriere jedes gefundene Modul
     for (const discovered of discoveredModules) {
       try {
         // Dynamischer Import zur Laufzeit
-        const module = await loadModuleRuntime(discovered.name);
+        const moduleEntry = await loadModuleRuntime(discovered.name);
         
-        if (!module || !module.metadata) {
+        if (!moduleEntry || !moduleEntry.metadata) {
           console.error(`[ModuleService] Invalid module: ${discovered.name}`);
           continue;
         }
 
-        await this.registerModuleInDb(module);
+        await this.registerModuleInDb(moduleEntry);
       } catch (error) {
         console.error(`[ModuleService] Failed to load module ${discovered.name}:`, error);
       }
     }
     
-    console.log("[ModuleService] Module discovery completed");
+    console.warn("[ModuleService] Module discovery completed");
   }
 
   /**
    * Registriert ein Modul in der Datenbank (falls noch nicht vorhanden)
    */
-  private static async registerModuleInDb(module: XynoxaModule): Promise<void> {
-    const { id, name, description, version, author, logoUrl } = module.metadata;
+  private static async registerModuleInDb(moduleEntry: XynoxaModule): Promise<void> {
+    const { id, name, description, version, author, logoUrl } = moduleEntry.metadata;
     
     try {
       // Prüfe ob modules Tabelle existiert
@@ -94,7 +94,7 @@ export class ModuleService {
           })
           .where(eq(modules.moduleId, id));
         
-        console.log(`[ModuleService] Updated module metadata: ${name} v${version}`);
+        console.warn(`[ModuleService] Updated module metadata: ${name} v${version}`);
       } else {
         // Neues Modul - als "inactive" registrieren
         await db.insert(modules).values({
@@ -107,7 +107,7 @@ export class ModuleService {
           status: "inactive" // Neue Module sind standardmäßig inaktiv
         });
         
-        console.log(`[ModuleService] Registered new module: ${name} v${version} (inactive)`);
+        console.warn(`[ModuleService] Registered new module: ${name} v${version} (inactive)`);
       }
     } catch (error) {
       console.error(`[ModuleService] Failed to register module ${id}:`, error);
@@ -141,9 +141,9 @@ export class ModuleService {
       const moduleObjects: XynoxaModule[] = [];
       
       for (const moduleId of activeModuleIds) {
-        const module = await this.loadModule(moduleId);
-        if (module) {
-          moduleObjects.push(module);
+        const moduleEntry = await this.loadModule(moduleId);
+        if (moduleEntry) {
+          moduleObjects.push(moduleEntry);
         }
       }
       
@@ -160,15 +160,15 @@ export class ModuleService {
   static async activateModule(moduleId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Lade das Modul
-      const module = await this.loadModule(moduleId);
-      if (!module) {
+      const moduleEntry = await this.loadModule(moduleId);
+      if (!moduleEntry) {
         return { success: false, error: "Module not found" };
       }
 
       // Führe Installation aus (falls definiert)
-      if (module.onInstall) {
+      if (moduleEntry.onInstall) {
         try {
-          const sqlStatements = await module.onInstall();
+          const sqlStatements = await moduleEntry.onInstall();
           
           // Wenn SQL-Statements zurückgegeben werden, führe sie aus
           if (Array.isArray(sqlStatements) && sqlStatements.length > 0) {
@@ -215,7 +215,7 @@ export class ModuleService {
         console.error(`[ModuleService] Failed to reindex module ${moduleId} after activation:`, error);
       });
 
-      console.log(`[ModuleService] Module ${moduleId} activated successfully`);
+      console.warn(`[ModuleService] Module ${moduleId} activated successfully`);
       return { success: true };
     } catch (error: any) {
       console.error(`[ModuleService] Failed to activate module ${moduleId}:`, error);
@@ -232,15 +232,15 @@ export class ModuleService {
   static async deactivateModule(moduleId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Lade das Modul
-      const module = await this.loadModule(moduleId);
-      if (!module) {
+      const moduleEntry = await this.loadModule(moduleId);
+      if (!moduleEntry) {
         return { success: false, error: "Module not found" };
       }
 
       // Führe Deinstallation aus (falls definiert)
-      if (module.onUninstall) {
+      if (moduleEntry.onUninstall) {
         try {
-          const sqlStatements = await module.onUninstall();
+          const sqlStatements = await moduleEntry.onUninstall();
           
           // Wenn SQL-Statements zurückgegeben werden, führe sie aus
           if (Array.isArray(sqlStatements) && sqlStatements.length > 0) {
@@ -268,7 +268,7 @@ export class ModuleService {
       const { moduleLoader } = await import("@/lib/module-loader");
       await moduleLoader.reload();
 
-      console.log(`[ModuleService] Module ${moduleId} deactivated successfully`);
+      console.warn(`[ModuleService] Module ${moduleId} deactivated successfully`);
       return { success: true };
     } catch (error: any) {
       console.error(`[ModuleService] Failed to deactivate module ${moduleId}:`, error);
@@ -289,10 +289,10 @@ export class ModuleService {
     // Lade jedes Modul und prüfe ob die ID passt
     for (const disc of discovered) {
       try {
-        const module = await loadModuleRuntime(disc.name);
+        const moduleEntry = await loadModuleRuntime(disc.name);
         
-        if (module && module.metadata.id === moduleId) {
-          return module;
+        if (moduleEntry && moduleEntry.metadata.id === moduleId) {
+          return moduleEntry;
         }
       } catch (error) {
         console.error(`[ModuleService] Failed to load module ${disc.name}:`, error);
@@ -319,18 +319,18 @@ export class ModuleService {
    * Ruft den onReindex Hook des Moduls auf
    */
   static async reindexModule(moduleId: string): Promise<{ success: boolean; indexed: number; error?: string }> {
-    console.log(`[ModuleService] Starting reindex for module: ${moduleId}`);
+    console.warn(`[ModuleService] Starting reindex for module: ${moduleId}`);
     
     try {
       // Lade das Modul
-      const module = await this.loadModule(moduleId);
-      if (!module) {
+      const moduleEntry = await this.loadModule(moduleId);
+      if (!moduleEntry) {
         return { success: false, indexed: 0, error: "Module not found" };
       }
 
       // Prüfe ob das Modul einen onReindex Hook hat
-      if (!module.onReindex) {
-        console.log(`[ModuleService] Module ${moduleId} has no onReindex hook, skipping`);
+      if (!moduleEntry.onReindex) {
+        console.warn(`[ModuleService] Module ${moduleId} has no onReindex hook, skipping`);
         return { success: true, indexed: 0 };
       }
 
@@ -369,14 +369,14 @@ export class ModuleService {
             }
           };
 
-          const indexed = await module.onReindex(user.id, context);
+          const indexed = await moduleEntry.onReindex(user.id, context);
           totalIndexed += indexed;
         } catch (error) {
           console.error(`[ModuleService] Failed to reindex module ${moduleId} for user ${user.id}:`, error);
         }
       }
 
-      console.log(`[ModuleService] Successfully reindexed module ${moduleId}. Total documents: ${totalIndexed}`);
+      console.warn(`[ModuleService] Successfully reindexed module ${moduleId}. Total documents: ${totalIndexed}`);
       return { success: true, indexed: totalIndexed };
     } catch (error: any) {
       console.error(`[ModuleService] Failed to reindex module ${moduleId}:`, error);

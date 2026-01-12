@@ -102,7 +102,7 @@ class ModuleRouterRegistryClass {
     }
     
     this.routers.set(routerId, { routerId, router, moduleId });
-    console.log(`[ModuleRouterRegistry] Registered router: ${routerId} (module: ${moduleId})`);
+    console.warn(`[ModuleRouterRegistry] Registered router: ${routerId} (module: ${moduleId})`);
   }
 
   /**
@@ -110,7 +110,7 @@ class ModuleRouterRegistryClass {
    */
   unregister(routerId: string): void {
     if (this.routers.delete(routerId)) {
-      console.log(`[ModuleRouterRegistry] Unregistered router: ${routerId}`);
+      console.warn(`[ModuleRouterRegistry] Unregistered router: ${routerId}`);
     }
   }
 
@@ -156,7 +156,7 @@ class ModuleRouterRegistryClass {
     }
     
     this.entityTypes.set(entityType.name, entityType);
-    console.log(`[ModuleRouterRegistry] Registered entity type: ${entityType.name} (module: ${entityType.moduleId})`);
+    console.warn(`[ModuleRouterRegistry] Registered entity type: ${entityType.name} (module: ${entityType.moduleId})`);
   }
 
   /**
@@ -164,7 +164,7 @@ class ModuleRouterRegistryClass {
    */
   unregisterEntityType(type: string): void {
     if (this.entityTypes.delete(type)) {
-      console.log(`[ModuleRouterRegistry] Unregistered entity type: ${type}`);
+      console.warn(`[ModuleRouterRegistry] Unregistered entity type: ${type}`);
     }
   }
 
@@ -202,7 +202,7 @@ class ModuleRouterRegistryClass {
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
-    console.log("[ModuleRouterRegistry] Initializing...");
+    console.warn("[ModuleRouterRegistry] Initializing...");
     
     // Registriere Core Entity-Typen
     this.registerCoreEntityTypes();
@@ -211,7 +211,7 @@ class ModuleRouterRegistryClass {
     await this.loadModuleRouters();
     
     this.initialized = true;
-    console.log(`[ModuleRouterRegistry] Initialized with ${this.routers.size} router(s) and ${this.entityTypes.size} entity type(s)`);
+    console.warn(`[ModuleRouterRegistry] Initialized with ${this.routers.size} router(s) and ${this.entityTypes.size} entity type(s)`);
   }
 
   /**
@@ -284,7 +284,7 @@ class ModuleRouterRegistryClass {
       const { ModuleService } = await import("@/server/services/module-service");
       const activeModuleIds = await ModuleService.getActiveModules();
       
-      console.log(`[ModuleRouterRegistry] Loading routers for active modules: ${activeModuleIds.join(", ")}`);
+      console.warn(`[ModuleRouterRegistry] Loading routers for active modules: ${activeModuleIds.join(", ")}`);
 
       // Dynamisch Module laden und Router registrieren
       for (const moduleId of activeModuleIds) {

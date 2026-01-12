@@ -28,7 +28,7 @@ export const modulesRouter = router({
         
         // Fallback: Wenn keine Module registriert sind, führe Discovery durch
         if (modules.length === 0) {
-          console.log("[modulesRouter] No modules found, running discovery...");
+          console.warn("[modulesRouter] No modules found, running discovery...");
           await ModuleService.discoverAndRegisterModules();
           return await ModuleService.getAllModules();
         }
