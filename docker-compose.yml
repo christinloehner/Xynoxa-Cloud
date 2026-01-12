@@ -1,0 +1,230 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_DOMAIN: ${APP_DOMAIN}
+        APP_URL: ${APP_URL}
+    env_file:
+      - .env
+    container_name: "${APP_CONTAINER_PREFIX}-app"
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - NODE_ENV=production
+      - PORT=${PORT:-3000}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - MEILI_HOST=${MEILI_HOST}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-devkey}
+    depends_on:
+      - db
+      - meilisearch
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/files_data:/app/storage
+      - ./volumes/logs:/app/logs
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.xynoxa.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.xynoxa.entrypoints=https"
+      - "traefik.http.routers.xynoxa.tls=true"
+      - "traefik.http.routers.xynoxa.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.xynoxa-upload.buffering.maxRequestBodyBytes=5368709120"
+      - "traefik.http.middlewares.xynoxa-upload.buffering.memRequestBodyBytes=10485760"
+      - "traefik.http.routers.xynoxa.middlewares=xynoxa-upload"
+      - "traefik.http.services.xynoxa.loadbalancer.server.port=3000"
+    networks:
+      - default
+      - proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: always
+    container_name: "${APP_CONTAINER_PREFIX}-db"
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      POSTGRES_DB: xynoxa
+      POSTGRES_USER: xynoxa
+      POSTGRES_PASSWORD: xynoxa
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xynoxa -d xynoxa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11.1
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-devkey}
+    container_name: "${APP_CONTAINER_PREFIX}-meilisearch"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/meili_data:/meili_data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs http://127.0.0.1:7700/health | grep -q 'available'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.2
+    restart: always
+    env_file:
+      - .env
+    container_name: "${APP_CONTAINER_PREFIX}-qdrant"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/qdrant_data:/qdrant/storage
+    networks:
+      - default
+    deploy:
+      replicas: 0 # optional service, scale when needed
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    env_file:
+      - .env
+    container_name: "${APP_CONTAINER_PREFIX}-redis"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_DOMAIN: ${APP_DOMAIN}
+        APP_URL: ${APP_URL}
+    command: npm run start:worker
+    env_file:
+      - .env
+    container_name: "${APP_CONTAINER_PREFIX}-worker"
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - MEILI_HOST=${MEILI_HOST}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-devkey}
+      - APP_URL=${APP_URL:-http://dev.xynoxa.com}
+      - STORAGE_PATH=/app/storage/files
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/files_data:/app/storage
+    depends_on:
+      - db
+      - redis
+    restart: always
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  code:
+    image: ghcr.io/coder/code-server:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - PASSWORD=${CODE_SERVER_PASSWORD:-xynoxa}
+    container_name: "${APP_CONTAINER_PREFIX}-code"
+    user: "0:0"
+    command:
+      - code-server
+      - "--bind-addr"
+      - "0.0.0.0:8080"
+      - "--auth"
+      - "password"
+      - "--disable-telemetry"
+      - "/app/storage"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./volumes/files_data:/app/storage
+      - ./volumes/code_server:/home/coder/.local/share/code-server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.vscode.rule=Host(`code.${APP_DOMAIN}`)"
+      - "traefik.http.routers.vscode.entrypoints=http,https"
+      - "traefik.http.routers.vscode.tls=true"
+      - "traefik.http.routers.vscode.tls.certresolver=myresolver"
+      - "traefik.http.services.vscode.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.vscode-headers.headers.customFrameOptionsValue="
+      - "traefik.http.middlewares.vscode-headers.headers.frameDeny=false"
+      - "traefik.http.middlewares.vscode-headers.headers.contentSecurityPolicy=frame-ancestors 'self' https://${APP_DOMAIN} https://code.${APP_DOMAIN}"
+      - "traefik.http.routers.vscode.middlewares=vscode-headers"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+      - proxy
+
+  # Optional: Traefik reverse proxy (commented out by default).
+  # Use this only if you want Traefik inside the same compose stack.
+  #
+  # traefik:
+  #   image: traefik:v2.11
+  #   restart: always
+  #   command:
+  #     - "--api.dashboard=true"
+  #     - "--providers.docker=true"
+  #     - "--providers.docker.exposedbydefault=false"
+  #     - "--entrypoints.http.address=:80"
+  #     - "--entrypoints.https.address=:443"
+  #     - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+  #     - "--certificatesresolvers.myresolver.acme.email=you@example.com"
+  #     - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ./volumes/letsencrypt:/letsencrypt
+  #   networks:
+  #     - proxy
+
+networks:
+  default:
+  proxy:
+    external: true

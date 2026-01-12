@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: xynoxa
+          POSTGRES_USER: xynoxa
+          POSTGRES_PASSWORD: xynoxa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U xynoxa -d xynoxa" \
+          --health-interval 10s \
+          --health-timeout 5s \
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Run migrations (smoke)
+        env:
+          DATABASE_URL: postgresql://xynoxa:xynoxa@localhost:5432/xynoxa
+        run: npm run db:migrate
+      - name: Unit tests
+        run: npm test

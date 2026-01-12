@@ -1,0 +1,61 @@
+<svg width="1800" height="512" viewBox="0 0 1800 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Icon -->
+  <g transform="translate(40,56) scale(0.35)">
+    <polygon
+      points="512,152 824,332 824,692 512,872 200,692 200,332"
+      fill="none"
+      stroke="#F5F5F5"
+      stroke-width="32"
+      stroke-linejoin="round"
+    />
+    <g filter="url(#softGlow)">
+      <line x1="320" y1="320" x2="704" y2="704" stroke="#00F2FF" stroke-width="84" stroke-linecap="round" />
+      <line x1="704" y1="320" x2="320" y2="704" stroke="#00F2FF" stroke-width="84" stroke-linecap="round" />
+    </g>
+    <circle cx="512" cy="512" r="42" fill="#00F2FF" filter="url(#glow)" />
+    <circle cx="512" cy="512" r="18" fill="#F5F5F5" opacity="0.9" />
+  </g>
+
+  <!-- Wordmark -->
+  <g fill="none">
+    <text
+      x="460"
+      y="320"
+      fill="#F5F5F5"
+      font-family="Rajdhani, Inter, system-ui, -apple-system, Segoe UI, sans-serif"
+      font-size="220"
+      font-weight="600"
+      letter-spacing="2"
+    >Xyn</text>
+
+    <circle cx="840" cy="288" r="46" fill="#00F2FF" filter="url(#glow)" />
+    <circle cx="840" cy="288" r="16" fill="#F5F5F5" opacity="0.9" />
+
+    <text
+      x="910"
+      y="320"
+      fill="#F5F5F5"
+      font-family="Rajdhani, Inter, system-ui, -apple-system, Segoe UI, sans-serif"
+      font-size="220"
+      font-weight="600"
+      letter-spacing="2"
+    >xa</text>
+  </g>
+</svg>

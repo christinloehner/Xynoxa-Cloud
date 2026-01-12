@@ -1,0 +1,39 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#F5F5F5" />
+
+  <!-- Hexagon outline -->
+  <polygon
+    points="512,152 824,332 824,692 512,872 200,692 200,332"
+    fill="none"
+    stroke="#0A0A0A"
+    stroke-width="32"
+    stroke-linejoin="round"
+  />
+
+  <!-- X shape with subtle glow -->
+  <g filter="url(#softGlow)">
+    <line x1="320" y1="320" x2="704" y2="704" stroke="#00F2FF" stroke-width="84" stroke-linecap="round" />
+    <line x1="704" y1="320" x2="320" y2="704" stroke="#00F2FF" stroke-width="84" stroke-linecap="round" />
+  </g>
+
+  <!-- Glow core -->
+  <circle cx="512" cy="512" r="42" fill="#00F2FF" filter="url(#glow)" />
+  <circle cx="512" cy="512" r="18" fill="#0A0A0A" opacity="0.85" />
+</svg>

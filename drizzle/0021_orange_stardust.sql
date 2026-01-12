@@ -1,0 +1,2 @@
+ALTER TABLE "upload_sessions" ADD COLUMN "file_id" uuid;--> statement-breakpoint
+ALTER TABLE "upload_sessions" ADD CONSTRAINT "upload_sessions_file_id_files_id_fk" FOREIGN KEY ("file_id") REFERENCES "public"."files"("id") ON DELETE set null ON UPDATE no action;

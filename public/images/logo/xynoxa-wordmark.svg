@@ -1,0 +1,36 @@
+<svg width="1400" height="360" viewBox="0 0 1400 360" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g fill="none">
+    <text
+      x="80"
+      y="230"
+      fill="#F5F5F5"
+      font-family="Rajdhani, Inter, system-ui, -apple-system, Segoe UI, sans-serif"
+      font-size="220"
+      font-weight="600"
+      letter-spacing="2"
+    >Xyn</text>
+
+    <circle cx="520" cy="200" r="48" fill="#00F2FF" filter="url(#glow)" />
+    <circle cx="520" cy="200" r="16" fill="#F5F5F5" opacity="0.9" />
+
+    <text
+      x="590"
+      y="230"
+      fill="#F5F5F5"
+      font-family="Rajdhani, Inter, system-ui, -apple-system, Segoe UI, sans-serif"
+      font-size="220"
+      font-weight="600"
+      letter-spacing="2"
+    >xa</text>
+  </g>
+</svg>

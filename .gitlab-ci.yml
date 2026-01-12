@@ -1,0 +1,33 @@
+stages:
+  - deploy
+
+live:
+  stage: deploy
+  image: dwdraju/ssh-client-alpine
+  environment:
+    name: Xynoxa Cloud Environment
+    url: https://cloud.xynoxa.com/
+  before_script:
+    - mkdir -p ~/.ssh
+    - eval $(ssh-agent -s)
+    - echo -e "$SSH_PRIVATEKEY_MAIN" | tr -d '\r' | ssh-add - > /dev/null
+    - echo -e "HOST *\n\tStrictHostKeyChecking no\n\tSendEnv CI_*\n\tUser $SSH_USER_MAIN\n\tPort $SSH_PORT_MAIN" > ~/.ssh/config
+    - ssh-keyscan "$SSH_HOST_MAIN" >> ~/.ssh/known_hosts
+    - chmod 700 ~/.ssh
+    - chmod 644 ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/config
+  script:
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; git checkout ."
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; git pull"
+    - sleep 2
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; if docker compose ps app | grep -q 'Up'; then docker compose exec app npm run db:push; else echo 'Container app läuft nicht, überspringe db:push'; fi"
+    - sleep 2
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; docker compose down"
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; docker compose down --remove-orphans"
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; docker compose build --pull --no-cache"
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; docker compose up -d"
+    - sleep 10
+    - ssh -t -A -p $SSH_PORT_MAIN $SSH_USER_MAIN@$SSH_HOST_MAIN "cd $SSH_PATH_MAIN ; docker compose exec app npm run db:push"
+    - sleep 2
+  only:
+    - main
