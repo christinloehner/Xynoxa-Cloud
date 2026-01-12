@@ -216,7 +216,7 @@ export function DatabaseMaintenance() {
                                     size="sm"
                                     variant="destructive"
                                     onClick={() => forceDelete(item.id)}
-                                    disabled={deleteFolderMutation.isLoading}
+                                    disabled={deleteFolderMutation.isPending}
                                 >
                                     Löschen
                                 </Button>
