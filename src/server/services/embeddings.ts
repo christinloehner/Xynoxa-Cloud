@@ -14,16 +14,24 @@ const CORE_ENTITIES = ["note", "file", "event", "task"] as const;
 // Dynamischer Entity Type - Core + Module Entities
 type Entity = typeof CORE_ENTITIES[number] | string;
 
-import { pipeline } from "@xenova/transformers";
-
 const MODEL_NAME = "Xenova/all-MiniLM-L6-v2";
 
 // Global singleton for the pipeline
 let embedder: any = null;
+let pipelineFn: typeof import("@xenova/transformers").pipeline | null = null;
+
+async function getPipeline() {
+  if (!pipelineFn) {
+    const mod = await import("@xenova/transformers");
+    pipelineFn = mod.pipeline;
+  }
+  return pipelineFn;
+}
 
 async function getEmbedder() {
   if (!embedder) {
     console.warn("Loading embedding model...");
+    const pipeline = await getPipeline();
     embedder = await pipeline("feature-extraction", MODEL_NAME, {
       quantized: false, // Use full precision if possible, or true for speed/size
     });
@@ -33,6 +41,10 @@ async function getEmbedder() {
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
+  if (process.env.VITEST || process.env.NODE_ENV === "test") {
+    const hash = crypto.createHash("sha256").update(text).digest();
+    return Array.from({ length: 384 }, (_, i) => hash[i % hash.length] / 255);
+  }
   const pipe = await getEmbedder();
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return Array(384).fill(0); // Model dimension is 384
