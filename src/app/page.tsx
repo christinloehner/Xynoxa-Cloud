@@ -151,7 +151,7 @@ export default async function Home() {
             {registrationEnabled && (
               <Link href="/auth/register" className="hover:text-slate-300">Register</Link>
             )}
-            <a href="https://github.com/xynoxa" target="_blank" className="hover:text-slate-300">GitHub</a>
+            <a href="https://github.com/christinloehner/Xynoxa-Cloud" target="_blank" className="hover:text-slate-300">GitHub</a>
           </div>
         </footer>
       </main>
