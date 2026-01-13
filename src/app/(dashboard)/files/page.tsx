@@ -136,7 +136,10 @@ export default function FilesPage() {
   };
 
   // Actions
-  const createFolder = trpc.folders.create.useMutation({ onSuccess: () => refreshFiles() });
+  const createFolder = trpc.folders.create.useMutation({ 
+    onSuccess: () => refreshFiles(),
+    onError: (err) => push({ title: "Fehler beim Erstellen", description: err.message, tone: "error" })
+  });
   const [newFolderName, setNewFolderName] = useState("");
 
   // Dialog States
@@ -146,21 +149,45 @@ export default function FilesPage() {
   const [shareItem, setShareItem] = useState<FileItem | null>(null);
 
   // Mutations
-  const renameFile = trpc.files.rename.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); } });
-  const renameFolder = trpc.folders.rename.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); } });
+  const renameFile = trpc.files.rename.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
+  });
+  const renameFolder = trpc.folders.rename.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Umbenannt", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
+  });
 
-  const softDeleteFile = trpc.files.softDelete.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "In Papierkorb verschoben", tone: "success" }); } });
-  const restoreFile = trpc.files.restore.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Wiederhergestellt", tone: "success" }); } });
-  const deleteFile = trpc.files.permanentDelete.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Endgültig gelöscht", tone: "success" }); } });
+  const softDeleteFile = trpc.files.softDelete.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "In Papierkorb verschoben", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler beim Löschen", description: err.message, tone: "error" })
+  });
+  const restoreFile = trpc.files.restore.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Wiederhergestellt", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
+  });
+  const deleteFile = trpc.files.permanentDelete.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Endgültig gelöscht", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler beim Löschen", description: err.message, tone: "error" })
+  });
   const deleteFolder = trpc.folders.delete.useMutation({
     onSuccess: () => { refreshFiles(); push({ title: "Ordner gelöscht", tone: "success" }); },
     onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
   });
 
-  const moveFile = trpc.files.move.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Verschoben", tone: "success" }); } });
-  const moveFolder = trpc.folders.move.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Verschoben", tone: "success" }); } });
+  const moveFile = trpc.files.move.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Verschoben", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler beim Verschieben", description: err.message, tone: "error" })
+  });
+  const moveFolder = trpc.folders.move.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Verschoben", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler beim Verschieben", description: err.message, tone: "error" })
+  });
 
-  const copyFile = trpc.files.copy.useMutation({ onSuccess: () => { refreshFiles(); push({ title: "Kopiert", tone: "success" }); } });
+  const copyFile = trpc.files.copy.useMutation({ 
+    onSuccess: () => { refreshFiles(); push({ title: "Kopiert", tone: "success" }); },
+    onError: (err) => push({ title: "Fehler beim Kopieren", description: err.message, tone: "error" })
+  });
 
   const toggleVault = trpc.files.toggleVault.useMutation({
     onSuccess: () => { refreshFiles(); push({ title: "Vault Status geändert", tone: "success" }); },
