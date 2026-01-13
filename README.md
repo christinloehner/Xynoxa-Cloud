@@ -14,6 +14,12 @@ A modern, self‑hosted personal cloud: files, notes, bookmarks, calendar, tasks
 - Multi‑user, groups, group folders, tenants
 - Desktop sync client
 
+## ATTENTION  ATTENTION  ATTENTION  ATTENTION  ATTENTION 
+
+Warning! This application is still under development and definitely not recommended for daily use! Currently, it is only recommended to install the application for testing purposes and not to use it in production!
+
+**Warning! Expect data loss when testing this application!**
+
 ## Quick Start (recommended: Traefik reverse proxy)
 
 One‑command setup (recommended for beginners):

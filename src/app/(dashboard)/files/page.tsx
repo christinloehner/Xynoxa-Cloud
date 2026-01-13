@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { useFilesQuery, FileItem, SortConfig } from "./use-files-query";
 import { FileList } from "./components/file-list";
@@ -525,6 +525,7 @@ export default function FilesPage() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [confirmBulkPermanentDelete, setConfirmBulkPermanentDelete] = useState(false);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+  const sidebarKeyRef = useRef<string>("none");
 
   // Memoize callback functions for FileDetails/BulkDetails to prevent re-render loops
   const handleCloseSidebar = useCallback(() => setSelectedIds(new Set()), []);
@@ -544,47 +545,48 @@ export default function FilesPage() {
   }, [items, selectedIds]);
 
   useEffect(() => {
-    if (viewTrash) {
-      setRightSidebar(null);
-      return;
-    }
+    let nextKey = "none";
+    let nextContent: ReactNode | null = null;
 
-    if (viewingFile) {
-      setRightSidebar(null);
-      return;
-    }
-
-    if (selectedIds.size === 1) {
-      const selectedItem = items.find(i => selectedIds.has(i.id));
-      if (selectedItem) {
-        setRightSidebar(
-          <FileDetails
-            item={selectedItem}
+    if (!viewTrash && !viewingFile) {
+      if (selectedIds.size === 1) {
+        const selectedItem = items.find(i => selectedIds.has(i.id));
+        if (selectedItem) {
+          nextKey = `file:${selectedItem.id}`;
+          nextContent = (
+            <FileDetails
+              item={selectedItem}
+              onClose={handleCloseSidebar}
+              onDownload={handleDownload}
+              onRename={handleRenameFromSidebar}
+              onShare={handleShareFromSidebar}
+              onDelete={handleDeleteFromSidebar}
+              onToggleVault={handleToggleVault}
+              onCopy={handleCopyFromSidebar}
+              onMove={handleMoveFromSidebar}
+              onVersions={handleOpenVersions}
+              onOpenInEditor={openInVsCode}
+            />
+          );
+        }
+      } else if (selectedIds.size > 1) {
+        const bulkIds = Array.from(selectedIds).sort();
+        nextKey = `bulk:${bulkIds.join(",")}`;
+        nextContent = (
+          <BulkDetails
+            count={selectedIds.size}
             onClose={handleCloseSidebar}
-            onDownload={handleDownload}
-            onRename={handleRenameFromSidebar}
-            onShare={handleShareFromSidebar}
-            onDelete={handleDeleteFromSidebar}
-            onToggleVault={handleToggleVault}
-            onCopy={handleCopyFromSidebar}
-            onMove={handleMoveFromSidebar}
-            onVersions={handleOpenVersions}
-            onOpenInEditor={openInVsCode}
+            onDelete={handleBulkDeleteConfirm}
+            onMove={handleBulkMove}
+            onCopy={handleBulkCopy}
           />
         );
       }
-    } else if (selectedIds.size > 1) {
-      setRightSidebar(
-        <BulkDetails
-          count={selectedIds.size}
-          onClose={handleCloseSidebar}
-          onDelete={handleBulkDeleteConfirm}
-          onMove={handleBulkMove}
-          onCopy={handleBulkCopy}
-        />
-      );
-    } else {
-      setRightSidebar(null);
+    }
+
+    if (sidebarKeyRef.current !== nextKey) {
+      sidebarKeyRef.current = nextKey;
+      setRightSidebar(nextContent);
     }
   }, [selectedIds, items, setRightSidebar, viewingFile, viewTrash, handleCloseSidebar, handleDownload, handleRenameFromSidebar, handleShareFromSidebar, handleDeleteFromSidebar, handleToggleVault, handleCopyFromSidebar, handleMoveFromSidebar, handleOpenVersions, openInVsCode, handleBulkDeleteConfirm, handleBulkMove, handleBulkCopy]);
 

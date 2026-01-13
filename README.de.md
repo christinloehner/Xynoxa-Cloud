@@ -8,6 +8,13 @@ Eine moderne, selbst gehostete Personal Cloud: Dateien, Notizen, Bookmarks, Kale
 - Multi‑User, Gruppen, Gruppenordner, Mandanten
 - Desktop‑Sync‑Client
 
+## ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG
+
+Achtung! Diese Anwendung ist noch in der Entwicklung und definitiv nicht empfohlen für den täglichen Gebrauch! Aktuell ist es nur empfohlen, die Anwendung zum testen zu installieren und nicht produktiv zu verwenden!
+
+**Achtung! Rechne aktuell noch mit Datenverlusten, wenn Du diese Anwendung testet!**
+
+
 ## Schnellstart (empfohlen: Traefik Reverse Proxy)
 
 One‑Command Setup (empfohlen für Einsteiger):
