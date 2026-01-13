@@ -42,7 +42,7 @@ Manual setup:
 1) Clone the repo
 
 ```bash
-git clone <YOUR_REPO_URL> xynoxa-cloud
+git clone https://github.com/christinloehner/Xynoxa-Cloud xynoxa-cloud
 cd xynoxa-cloud
 ```
 
