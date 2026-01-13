@@ -25,7 +25,6 @@ export function DatabaseMaintenance() {
     const [isStarting, setIsStarting] = useState<{ orphan?: boolean; reset?: boolean }>({});
     const [folderName, setFolderName] = useState("");
     const [searchName, setSearchName] = useState<string | null>(null);
-    const [folderResults, setFolderResults] = useState<{ id: string; name: string; path: string }[]>([]);
 
     const statusOrphan = trpc.maintenance.status.useQuery(
         { jobId: jobIds.orphan! },
@@ -68,7 +67,7 @@ export function DatabaseMaintenance() {
     const deleteFolderMutation = trpc.maintenance.forceDeleteFolder.useMutation({
         onSuccess: (_data, variables) => {
             toast.success("Ordner gelöscht.");
-            setFolderResults((items) => items.filter((i) => i.id !== variables.id));
+            findFoldersQuery.refetch();
         },
         onError: (err) => {
             toast.error(err.message);
@@ -111,11 +110,10 @@ export function DatabaseMaintenance() {
     useEffect(() => {
         if (!findFoldersQuery.data) return;
         const items = findFoldersQuery.data.items ?? [];
-        setFolderResults(items);
         if (!items.length) {
             toast.message("Keine Ordner gefunden.");
         }
-    }, [findFoldersQuery.data]);
+    }, [findFoldersQuery.dataUpdatedAt]);
 
     const orphanState = jobState(statusOrphan.data);
     const resetState = jobState(statusReset.data);
@@ -204,9 +202,9 @@ export function DatabaseMaintenance() {
                         Suchen
                     </Button>
                 </div>
-                {folderResults.length > 0 && (
+                {(findFoldersQuery.data?.items?.length ?? 0) > 0 && (
                     <div className="space-y-2 text-xs text-amber-100/90">
-                        {folderResults.map((item) => (
+                        {findFoldersQuery.data?.items?.map((item) => (
                             <div key={item.id} className="flex items-center justify-between gap-2 rounded-md border border-amber-900/30 bg-amber-950/30 p-2">
                                 <div className="min-w-0">
                                     <p className="truncate text-amber-100">{item.path}</p>
