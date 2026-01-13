@@ -232,7 +232,7 @@ export default function FilesPage() {
     setRenameItem(null);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     // If specific item marked for delete, use it. Otherwise use selection.
     const idsToDelete = deleteItem ? [deleteItem.id] : Array.from(selectedIds);
     if (idsToDelete.length === 0) return;
@@ -245,11 +245,7 @@ export default function FilesPage() {
       return;
     }
 
-    // First clear UI state immediately
-    setDeleteItem(null);
-    setSelectedIds(new Set());
-
-    // Then execute the mutations sequentially to avoid state conflicts
+    // Then execute the mutations - close dialog after to avoid race conditions
     for (const id of idsToDelete) {
       const item = items.find(i => i.id === id);
       if (!item) continue;
@@ -263,6 +259,10 @@ export default function FilesPage() {
         }
       }
     }
+    
+    // Clear UI state after mutations are sent (not awaited, but queued in React Query)
+    setDeleteItem(null);
+    setSelectedIds(new Set());
   };
 
   const handleOpenVersions = useCallback((item: FileItem) => {
