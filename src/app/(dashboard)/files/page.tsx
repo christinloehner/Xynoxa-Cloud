@@ -218,11 +218,14 @@ export default function FilesPage() {
       return;
     }
 
-    // We can't easily wait for all if we fire 100 mutations, but for now loop.
-    // Better: use Promise.all with mutateAsync? Or just mutate.
-    idsToDelete.forEach(id => {
+    // First clear UI state immediately
+    setDeleteItem(null);
+    setSelectedIds(new Set());
+
+    // Then execute the mutations sequentially to avoid state conflicts
+    for (const id of idsToDelete) {
       const item = items.find(i => i.id === id);
-      if (!item) return;
+      if (!item) continue;
       if (item.kind === "folder") {
         deleteFolder.mutate({ id });
       } else {
@@ -232,10 +235,7 @@ export default function FilesPage() {
           softDeleteFile.mutate({ fileId: id });
         }
       }
-    });
-
-    setDeleteItem(null);
-    setSelectedIds(new Set());
+    }
   };
 
   const handleOpenVersions = useCallback((item: FileItem) => {
@@ -831,9 +831,12 @@ export default function FilesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              Array.from(selectedIds).forEach((id) => deleteFile.mutate({ fileId: id }));
+              const idsToDelete = Array.from(selectedIds);
               setSelectedIds(new Set());
               setConfirmBulkPermanentDelete(false);
+              for (const id of idsToDelete) {
+                deleteFile.mutate({ fileId: id });
+              }
             }} className="bg-red-600 hover:bg-red-700">Endgültig löschen</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -849,13 +852,11 @@ export default function FilesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              items.forEach((item) => {
-                if (item.kind === "file") {
-                  deleteFile.mutate({ fileId: item.id });
-                }
-              });
-              setSelectedIds(new Set());
+              const filesToDelete = items.filter(item => item.kind === "file");
               setConfirmEmptyTrash(false);
+              for (const item of filesToDelete) {
+                deleteFile.mutate({ fileId: item.id });
+              }
             }} className="bg-red-600 hover:bg-red-700">
               Papierkorb leeren
             </AlertDialogAction>
