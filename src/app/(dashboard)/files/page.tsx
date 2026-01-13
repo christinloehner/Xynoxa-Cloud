@@ -119,7 +119,7 @@ export default function FilesPage() {
     }
   }, [searchParams, items]);
 
-  const refreshFiles = async () => {
+  const refreshFiles = useCallback(async () => {
     const folderId = currentFolder ?? null;
     if (viewTrash) {
       await utils.files.listDeleted.invalidate();
@@ -133,7 +133,7 @@ export default function FilesPage() {
         utils.folders.list.refetch({ parentId: folderId })
       ]);
     }
-  };
+  }, [currentFolder, viewTrash, utils]);
 
   // Actions
   const createFolder = trpc.folders.create.useMutation({ 
@@ -159,7 +159,6 @@ export default function FilesPage() {
   });
 
   const softDeleteFile = trpc.files.softDelete.useMutation({ 
-    onSuccess: () => { refreshFiles(); push({ title: "In Papierkorb verschoben", tone: "success" }); },
     onError: (err) => push({ title: "Fehler beim Löschen", description: err.message, tone: "error" })
   });
   const restoreFile = trpc.files.restore.useMutation({ 
@@ -167,11 +166,9 @@ export default function FilesPage() {
     onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
   });
   const deleteFile = trpc.files.permanentDelete.useMutation({ 
-    onSuccess: () => { refreshFiles(); push({ title: "Endgültig gelöscht", tone: "success" }); },
     onError: (err) => push({ title: "Fehler beim Löschen", description: err.message, tone: "error" })
   });
   const deleteFolder = trpc.folders.delete.useMutation({
-    onSuccess: () => { refreshFiles(); push({ title: "Ordner gelöscht", tone: "success" }); },
     onError: (err) => push({ title: "Fehler", description: err.message, tone: "error" })
   });
 
@@ -222,7 +219,7 @@ export default function FilesPage() {
   }, [viewMode]);
 
 
-  const handleRename = (newName: string) => {
+  const handleRename = useCallback((newName: string) => {
     if (!renameItem) return;
     if (renameItem.kind === "folder") {
       renameFolder.mutate({ id: renameItem.id, name: newName });
@@ -230,9 +227,9 @@ export default function FilesPage() {
       renameFile.mutate({ id: renameItem.id, name: newName });
     }
     setRenameItem(null);
-  };
+  }, [renameItem, renameFolder, renameFile]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(async () => {
     // If specific item marked for delete, use it. Otherwise use selection.
     const idsToDelete = deleteItem ? [deleteItem.id] : Array.from(selectedIds);
     if (idsToDelete.length === 0) return;
@@ -249,19 +246,33 @@ export default function FilesPage() {
     setDeleteItem(null);
     setSelectedIds(new Set());
 
-    // Execute mutations for each item
-    itemsToProcess.forEach(item => {
-      if (item.kind === "folder") {
-        deleteFolder.mutate({ id: item.id });
-      } else {
-        if (viewTrash) {
-          deleteFile.mutate({ fileId: item.id });
+    // Execute mutations for each item and wait for all to complete
+    try {
+      const deletePromises = itemsToProcess.map(item => {
+        if (item.kind === "folder") {
+          return deleteFolder.mutateAsync({ id: item.id });
         } else {
-          softDeleteFile.mutate({ fileId: item.id });
+          if (viewTrash) {
+            return deleteFile.mutateAsync({ fileId: item.id });
+          } else {
+            return softDeleteFile.mutateAsync({ fileId: item.id });
+          }
         }
-      }
-    });
-  };
+      });
+
+      await Promise.all(deletePromises);
+      
+      // Only refresh once after all deletions are complete
+      await refreshFiles();
+      
+      const message = viewTrash ? "Endgültig gelöscht" : "In Papierkorb verschoben";
+      push({ title: message, tone: "success" });
+    } catch (error: any) {
+      // Errors are already handled by mutation onError callbacks
+      // But we should still refresh to show correct state
+      await refreshFiles();
+    }
+  }, [deleteItem, selectedIds, items, hasKey, viewTrash, deleteFolder, deleteFile, softDeleteFile, push, refreshFiles]);
 
   const handleOpenVersions = useCallback((item: FileItem) => {
     if (item.kind !== "file") return;
@@ -269,16 +280,16 @@ export default function FilesPage() {
   }, []);
 
   // Close file viewer and clean URL
-  const handleCloseViewer = () => {
+  const handleCloseViewer = useCallback(() => {
     setViewingFile(null);
     // Remove 'file' query parameter from URL
     const params = new URLSearchParams(searchParams.toString());
     params.delete("file");
     const newUrl = params.toString() ? `/files?${params.toString()}` : '/files';
     router.replace(newUrl as any, { scroll: false });
-  };
+  }, [searchParams, router]);
 
-  const handleMoveCopy = (targetFolderId: string | null) => {
+  const handleMoveCopy = useCallback((targetFolderId: string | null) => {
     // If specific item targeted (e.g. from context menu context), use it. Else selection.
     // Currently moveCopyItem holds the "context" item. But if we are in bulk mode?
     // We should treat moveCopyItem as the "initiator" but if selectedIds has it, move all selected?
@@ -327,10 +338,11 @@ export default function FilesPage() {
 
     setMoveCopyItem(null);
     setSelectedIds(new Set());
-  };
+  }, [selectedIds, items, moveCopyItem, moveFolder, moveFile, copyFile]);
 
-  const textExtensions = ["txt", "md", "js", "ts", "tsx", "jsx", "json", "css", "scss", "html", "xml", "php", "py", "rb", "go", "rs", "c", "cpp", "java", "sh", "yml", "yaml", "toml"];
-  const isTextLikeFile = (file: FileItem) => {
+  const textExtensions = useMemo(() => ["txt", "md", "js", "ts", "tsx", "jsx", "json", "css", "scss", "html", "xml", "php", "py", "rb", "go", "rs", "c", "cpp", "java", "sh", "yml", "yaml", "toml"], []);
+  
+  const isTextLikeFile = useCallback((file: FileItem) => {
     const mime = (file.mime || "").toLowerCase();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     const isKnownTextMime =
@@ -340,7 +352,7 @@ export default function FilesPage() {
       mime.includes("xml") ||
       mime === "application/x-sh";
     return isKnownTextMime || textExtensions.includes(ext);
-  };
+  }, [textExtensions]);
 
   const openInVsCode = useCallback(async (file: FileItem) => {
     try {
@@ -423,7 +435,7 @@ export default function FilesPage() {
 
   const [lastInteractedId, setLastInteractedId] = useState<string | null>(null);
 
-  const handleToggleSelect = (id: string, multi: boolean, range: boolean) => {
+  const handleToggleSelect = useCallback((id: string, multi: boolean, range: boolean) => {
     let newSet = new Set(multi ? selectedIds : new Set<string>());
 
     if (range && lastInteractedId && items.length > 0) {
@@ -471,9 +483,9 @@ export default function FilesPage() {
 
     setSelectedIds(newSet);
     setLastInteractedId(id);
-  };
+  }, [selectedIds, lastInteractedId, items]);
 
-  const handleNavigate = (id: string, itemArg?: FileItem) => {
+  const handleNavigate = useCallback((id: string, itemArg?: FileItem) => {
     const item = itemArg ?? items.find(i => i.id === id);
     if (!item) return;
     if (item.kind === "folder") {
@@ -493,9 +505,9 @@ export default function FilesPage() {
       return;
     }
     setViewingFile(item);
-  };
+  }, [items, hasKey, isTextLikeFile, openInVsCode, handleCloseViewer, push]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (viewTrash) return;
     if (viewingFile) {
       handleCloseViewer();
@@ -508,11 +520,28 @@ export default function FilesPage() {
     } else {
       setCurrentFolder(breadcrumb.data[breadcrumb.data.length - 2].id);
     }
-  };
+  }, [viewTrash, viewingFile, handleCloseViewer, breadcrumb.data]);
 
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [confirmBulkPermanentDelete, setConfirmBulkPermanentDelete] = useState(false);
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+
+  // Memoize callback functions for FileDetails/BulkDetails to prevent re-render loops
+  const handleCloseSidebar = useCallback(() => setSelectedIds(new Set()), []);
+  const handleRenameFromSidebar = useCallback((item: FileItem) => setRenameItem(item), []);
+  const handleShareFromSidebar = useCallback((item: FileItem) => setShareItem(item), []);
+  const handleDeleteFromSidebar = useCallback((item: FileItem) => setDeleteItem(item), []);
+  const handleCopyFromSidebar = useCallback((item: FileItem) => setMoveCopyItem({ item, mode: "copy" }), []);
+  const handleMoveFromSidebar = useCallback((item: FileItem) => setMoveCopyItem({ item, mode: "move" }), []);
+  const handleBulkDeleteConfirm = useCallback(() => setConfirmBulkDelete(true), []);
+  const handleBulkMove = useCallback(() => {
+    const first = items.find(i => selectedIds.has(i.id));
+    if (first) setMoveCopyItem({ item: first, mode: 'move' });
+  }, [items, selectedIds]);
+  const handleBulkCopy = useCallback(() => {
+    const first = items.find(i => selectedIds.has(i.id));
+    if (first) setMoveCopyItem({ item: first, mode: 'copy' });
+  }, [items, selectedIds]);
 
   useEffect(() => {
     if (viewTrash) {
@@ -531,17 +560,16 @@ export default function FilesPage() {
         setRightSidebar(
           <FileDetails
             item={selectedItem}
-            onClose={() => setSelectedIds(new Set())}
+            onClose={handleCloseSidebar}
             onDownload={handleDownload}
-            onRename={(item) => setRenameItem(item)}
-            onShare={(item) => setShareItem(item)}
-            onDelete={(item) => setDeleteItem(item)}
+            onRename={handleRenameFromSidebar}
+            onShare={handleShareFromSidebar}
+            onDelete={handleDeleteFromSidebar}
             onToggleVault={handleToggleVault}
-            onCopy={(item) => setMoveCopyItem({ item, mode: "copy" })}
-            onMove={(item) => setMoveCopyItem({ item, mode: "move" })}
-            onVersions={(item) => handleOpenVersions(item)}
-            // VS Code Editor Modal
-            onOpenInEditor={(item) => openInVsCode(item)}
+            onCopy={handleCopyFromSidebar}
+            onMove={handleMoveFromSidebar}
+            onVersions={handleOpenVersions}
+            onOpenInEditor={openInVsCode}
           />
         );
       }
@@ -549,22 +577,16 @@ export default function FilesPage() {
       setRightSidebar(
         <BulkDetails
           count={selectedIds.size}
-          onClose={() => setSelectedIds(new Set())}
-          onDelete={() => setConfirmBulkDelete(true)}
-          onMove={() => {
-            const first = items.find(i => selectedIds.has(i.id));
-            if (first) setMoveCopyItem({ item: first, mode: 'move' });
-          }}
-          onCopy={() => {
-            const first = items.find(i => selectedIds.has(i.id));
-            if (first) setMoveCopyItem({ item: first, mode: 'copy' });
-          }}
+          onClose={handleCloseSidebar}
+          onDelete={handleBulkDeleteConfirm}
+          onMove={handleBulkMove}
+          onCopy={handleBulkCopy}
         />
       );
     } else {
       setRightSidebar(null);
     }
-  }, [selectedIds, items, setRightSidebar, viewingFile, handleDownload, handleOpenVersions, handleToggleVault, openInVsCode, viewTrash]);
+  }, [selectedIds, items, setRightSidebar, viewingFile, viewTrash, handleCloseSidebar, handleDownload, handleRenameFromSidebar, handleShareFromSidebar, handleDeleteFromSidebar, handleToggleVault, handleCopyFromSidebar, handleMoveFromSidebar, handleOpenVersions, openInVsCode, handleBulkDeleteConfirm, handleBulkMove, handleBulkCopy]);
 
   useEffect(() => {
     return () => setRightSidebar(null);
