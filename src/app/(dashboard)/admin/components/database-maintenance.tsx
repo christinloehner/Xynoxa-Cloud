@@ -113,6 +113,7 @@ export function DatabaseMaintenance() {
         if (!items.length) {
             toast.message("Keine Ordner gefunden.");
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [findFoldersQuery.dataUpdatedAt]);
 
     const orphanState = jobState(statusOrphan.data);
