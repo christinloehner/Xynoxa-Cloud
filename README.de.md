@@ -8,6 +8,15 @@ Eine moderne, selbst gehostete Personal Cloud: Dateien, Notizen, Bookmarks, Kale
 - Multi‑User, Gruppen, Gruppenordner, Mandanten
 - Desktop‑Sync‑Client
 
+## Offizielle Links
+
+Dein Xynoxa-Kompass: Startpunkt, Quellen und alle drei Apps an einem Ort, damit du immer direkt im richtigen Repo landest.
+
+- Xynoxa Webseite: https://www.xynoxa.com
+- Xynoxa Cloud Anwendung: https://github.com/christinloehner/Xynoxa-Cloud
+- Xynoxa Desktop Client: https://github.com/christinloehner/Xynoxa-Desktop-Client
+- Xynoxa Mobile Client: https://github.com/christinloehner/Xynoxa-Mobile-Client
+
 ## ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG ACHTUNG
 
 Achtung! Diese Anwendung ist noch in der Entwicklung und definitiv nicht empfohlen für den täglichen Gebrauch! Aktuell ist es nur empfohlen, die Anwendung zum testen zu installieren und nicht produktiv zu verwenden!
