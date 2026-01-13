@@ -245,24 +245,22 @@ export default function FilesPage() {
       return;
     }
 
-    // Then execute the mutations - close dialog after to avoid race conditions
-    for (const id of idsToDelete) {
-      const item = items.find(i => i.id === id);
-      if (!item) continue;
-      if (item.kind === "folder") {
-        deleteFolder.mutate({ id });
-      } else {
-        if (viewTrash) {
-          deleteFile.mutate({ fileId: id });
-        } else {
-          softDeleteFile.mutate({ fileId: id });
-        }
-      }
-    }
-    
-    // Clear UI state after mutations are sent (not awaited, but queued in React Query)
+    // Immediately close dialog
     setDeleteItem(null);
     setSelectedIds(new Set());
+
+    // Execute mutations for each item
+    itemsToProcess.forEach(item => {
+      if (item.kind === "folder") {
+        deleteFolder.mutate({ id: item.id });
+      } else {
+        if (viewTrash) {
+          deleteFile.mutate({ fileId: item.id });
+        } else {
+          softDeleteFile.mutate({ fileId: item.id });
+        }
+      }
+    });
   };
 
   const handleOpenVersions = useCallback((item: FileItem) => {
