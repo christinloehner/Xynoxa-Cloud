@@ -14,6 +14,15 @@ A modern, self‑hosted personal cloud: files, notes, bookmarks, calendar, tasks
 - Multi‑user, groups, group folders, tenants
 - Desktop sync client
 
+## Official Links
+
+Your control center for everything Xynoxa — the home base plus all three apps in one place, so you can jump straight to the right repo.
+
+- Xynoxa Website: https://www.xynoxa.com
+- Xynoxa Cloud App: https://github.com/christinloehner/Xynoxa-Cloud
+- Xynoxa Desktop Client: https://github.com/christinloehner/Xynoxa-Desktop-Client
+- Xynoxa Mobile Client: https://github.com/christinloehner/Xynoxa-Mobile-Client
+
 ## ATTENTION  ATTENTION  ATTENTION  ATTENTION  ATTENTION 
 
 Warning! This application is still under development and definitely not recommended for daily use! Currently, it is only recommended to install the application for testing purposes and not to use it in production!
