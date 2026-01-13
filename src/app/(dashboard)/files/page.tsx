@@ -84,6 +84,11 @@ export default function FilesPage() {
   const [vsCodeLoading, setVsCodeLoading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
 
+  // Vault
+  const { hasKey, setPassphrase: activateVault, loading: vaultLoading } = useVaultKey();
+  const [vaultDialogOpen, setVaultDialogOpen] = useState(false);
+  const [vaultPassphrase, setVaultPassphrase] = useState("");
+
   const breadcrumb = trpc.folders.breadcrumb.useQuery(
     { id: currentFolder as string },
     { enabled: !!currentFolder && !viewTrash }
@@ -394,11 +399,6 @@ export default function FilesPage() {
     window.open(`/api/files/download?id=${item.id}`, '_blank');
   }, [push]);
 
-
-  // Vault
-  const { hasKey, setPassphrase: activateVault, loading: vaultLoading } = useVaultKey();
-  const [vaultDialogOpen, setVaultDialogOpen] = useState(false);
-  const [vaultPassphrase, setVaultPassphrase] = useState("");
 
   const handleVaultUnlock = async () => {
     if (!vaultPassphrase.trim()) return;
